@@ -39,6 +39,12 @@
             <button id="start-btn" class="btn-login-vibrant">
                 BẮT ĐẦU HỌC NGAY
             </button>
+
+            <!-- Hidden Form & Iframe for Google Forms Attendance Tracking -->
+            <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;" onload="if(window.submitted) { if(window.finishLogin) window.finishLogin(); }"></iframe>
+            <form id="tracking-form" action="https://docs.google.com/forms/d/e/1FAIpQLSc1mIvmT7FQBOL415zz3Hm4iQBHJZqziNla9Z70Ozm4ihIqwA/formResponse" method="post" target="hidden_iframe" style="display:none;">
+                <input type="text" name="entry.388968236" id="entry_388968236">
+            </form>
         </div>
     </div>
 

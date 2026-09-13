@@ -193,7 +193,7 @@ function initApp() {
 }
 
 /* ==========================================================================
-   1. AUTH & WELCOME MODAL
+   1. AUTH & WELCOME MODAL & GOOGLE FORMS ATTENDANCE TRACKING
    ========================================================================== */
 function initAuth() {
     const welcomeModal = document.getElementById('welcome-modal');
@@ -203,13 +203,32 @@ function initAuth() {
     const errorMsg = document.getElementById('login-error');
     const userProfile = document.getElementById('user-profile');
     const displayName = document.getElementById('display-name');
+    const trackingForm = document.getElementById('tracking-form');
+    const entryInput = document.getElementById('entry_388968236');
 
-    function enterApp() {
+    const GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSc1mIvmT7FQBOL415zz3Hm4iQBHJZqziNla9Z70Ozm4ihIqwA/formResponse";
+    const ENTRY_FIELD = "entry.388968236";
+
+    // Pre-fill previously saved name and class for student convenience
+    const savedName = localStorage.getItem('vstep_sp2_name') || '';
+    const savedClass = localStorage.getItem('vstep_sp2_class') || '';
+    if (nameInput && savedName) nameInput.value = savedName;
+    if (classInput && savedClass) classInput.value = savedClass;
+
+    // Show modal on startup to track attendance
+    if (welcomeModal) {
+        welcomeModal.classList.remove('hidden');
+        welcomeModal.style.display = 'flex';
+        welcomeModal.style.opacity = '1';
+    }
+
+    let isSubmitting = false;
+
+    window.finishLogin = () => {
         const nameVal = nameInput ? nameInput.value.trim() : '';
         const classVal = classInput ? classInput.value.trim() : '';
-
-        const finalName = nameVal || 'Học viên';
-        const finalClass = classVal || 'VSTEP-B1';
+        const finalName = nameVal || savedName || 'Học viên';
+        const finalClass = classVal || savedClass || 'VSTEP-B1';
 
         state.student.name = finalName;
         state.student.classCode = finalClass;
@@ -218,21 +237,103 @@ function initAuth() {
 
         if (displayName) displayName.textContent = `${finalName} (${finalClass})`;
         if (userProfile) userProfile.classList.remove('hidden');
-        if (welcomeModal) welcomeModal.classList.add('hidden');
-        
-        showToast(`Chào mừng ${finalName} đến với bài học Speaking Part 02! 🚀`);
-    }
 
-    if (state.student.name) {
-        if (welcomeModal) welcomeModal.classList.add('hidden');
-        if (userProfile) userProfile.classList.remove('hidden');
-        if (displayName) displayName.textContent = `${state.student.name} (${state.student.classCode || 'B1'})`;
-    } else {
-        if (welcomeModal) welcomeModal.classList.remove('hidden');
+        if (welcomeModal) {
+            welcomeModal.style.opacity = '0';
+            welcomeModal.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => {
+                welcomeModal.classList.add('hidden');
+                welcomeModal.style.display = 'none';
+            }, 300);
+        }
+
+        if (startBtn) {
+            startBtn.disabled = false;
+            startBtn.innerHTML = 'BẮT ĐẦU HỌC NGAY';
+        }
+        isSubmitting = false;
+
+        showToast(`Chào mừng ${finalName} - Lớp ${finalClass} đến với bài học Speaking Part 02! 🚀`);
+    };
+
+    function enterApp() {
+        if (isSubmitting) return;
+
+        const nameVal = nameInput ? nameInput.value.trim() : '';
+        const classVal = classInput ? classInput.value.trim() : '';
+
+        if (!nameVal || !classVal) {
+            if (errorMsg) {
+                errorMsg.textContent = 'Vui lòng nhập đầy đủ Họ tên và Lớp học!';
+                errorMsg.style.display = 'block';
+            }
+            if (!nameVal && nameInput) nameInput.focus();
+            else if (!classVal && classInput) classInput.focus();
+            return;
+        }
+
+        if (errorMsg) errorMsg.style.display = 'none';
+        isSubmitting = true;
+
+        if (startBtn) {
+            startBtn.disabled = true;
+            startBtn.innerHTML = '<span>Đang vào lớp...</span> <i class="fa-solid fa-spinner fa-spin"></i>';
+        }
+
+        const logData = `${nameVal} - Lớp: ${classVal}`;
+
+        // 1. Submit via hidden iframe for guaranteed delivery
+        if (trackingForm && entryInput) {
+            entryInput.value = logData;
+            window.submitted = true;
+            try {
+                trackingForm.submit();
+            } catch (e) {
+                console.warn('Iframe form submit error:', e);
+            }
+        }
+
+        // 2. Parallel fetch with no-cors
+        try {
+            const formData = new FormData();
+            formData.append(ENTRY_FIELD, logData);
+            fetch(GOOGLE_FORM_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: formData
+            }).catch(e => console.warn('Fetch tracking warn:', e));
+        } catch (e) {
+            console.warn('Fetch init warn:', e);
+        }
+
+        // 3. Fallback timeout to ensure login completes even if iframe onload is blocked by browser
+        setTimeout(() => {
+            if (welcomeModal && (!welcomeModal.classList.contains('hidden') || welcomeModal.style.display !== 'none')) {
+                window.finishLogin();
+            }
+        }, 1000);
     }
 
     if (startBtn) {
         startBtn.addEventListener('click', enterApp);
+    }
+
+    // Allow user to click their profile in the sidebar to change info or re-login
+    if (userProfile) {
+        userProfile.style.cursor = 'pointer';
+        userProfile.title = 'Nhấp để đổi thông tin học viên';
+        userProfile.addEventListener('click', () => {
+            if (welcomeModal) {
+                welcomeModal.style.display = 'flex';
+                welcomeModal.classList.remove('hidden');
+                welcomeModal.style.opacity = '1';
+                if (startBtn) {
+                    startBtn.disabled = false;
+                    startBtn.innerHTML = 'CẬP NHẬT & VÀO HỌC';
+                }
+                if (nameInput) nameInput.focus();
+            }
+        });
     }
 
     // Enter key support
