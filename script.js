@@ -442,9 +442,14 @@ function initTheme() {
 function initNavigation() {
     const navItems = document.querySelectorAll('.nav-item');
     const tabPanes = document.querySelectorAll('.tab-pane');
-    const mobileToggle = document.getElementById('mobile-toggle');
     const sidebar = document.getElementById('sidebar');
+    const sidebarBackdrop = document.getElementById('sidebar-backdrop');
     const topTitle = document.getElementById('top-title');
+
+    function closeSidebar() {
+        if (sidebar) sidebar.classList.remove('open');
+        if (sidebarBackdrop) sidebarBackdrop.classList.remove('active');
+    }
 
     function switchTab(targetId) {
         navItems.forEach(item => {
@@ -471,7 +476,7 @@ function initNavigation() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
         if (window.innerWidth <= 768) {
-            sidebar.classList.remove('open');
+            closeSidebar();
         }
     }
 
@@ -487,10 +492,28 @@ function initNavigation() {
     });
 
     if (mobileToggle) {
-        mobileToggle.addEventListener('click', () => {
-            sidebar.classList.toggle('open');
+        mobileToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = sidebar.classList.toggle('open');
+            if (sidebarBackdrop) {
+                if (isOpen) sidebarBackdrop.classList.add('active');
+                else sidebarBackdrop.classList.remove('active');
+            }
         });
     }
+
+    if (sidebarBackdrop) {
+        sidebarBackdrop.addEventListener('click', closeSidebar);
+    }
+
+    // Tap outside sidebar on mobile to close
+    document.addEventListener('click', (e) => {
+        if (window.innerWidth <= 768 && sidebar && sidebar.classList.contains('open')) {
+            if (!sidebar.contains(e.target) && !mobileToggle?.contains(e.target)) {
+                closeSidebar();
+            }
+        }
+    });
 
     // Hash check on load
     const currentHash = window.location.hash.replace('#', '');

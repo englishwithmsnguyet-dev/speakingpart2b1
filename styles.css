@@ -1444,18 +1444,115 @@ body.dark-theme .tag-syntax.purple { background: #581c87; color: #e9d5ff; }
     .group-banner { flex-direction: column-reverse; text-align: center; }
 }
 
+/* Sidebar Backdrop for Mobile */
+.sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(4px);
+    z-index: 995;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
 @media (max-width: 768px) {
     .sidebar {
         position: fixed;
         left: 0; top: 0; bottom: 0;
         transform: translateX(-100%);
+        z-index: 1000;
+        box-shadow: 0 0 40px rgba(0,0,0,0.4);
     }
-    .sidebar.open { transform: translateX(0); }
-    .mobile-toggle { display: block; }
-    .content-area { padding: 1.25rem 1rem 3rem; }
-    .visual-module { padding: 1.4rem 1.2rem; }
-    .hero-vibrant-card { padding: 1.75rem 1.25rem; }
-    .hero-vibrant-card h1 { font-size: 1.6rem; }
+    .sidebar.open {
+        transform: translateX(0);
+    }
+    .sidebar.open ~ .sidebar-backdrop,
+    .sidebar-backdrop.active {
+        display: block;
+        opacity: 1;
+    }
+    .mobile-toggle {
+        display: block;
+    }
+    .top-bar {
+        padding: 0.65rem 1rem;
+        gap: 0.5rem;
+    }
+    .brand-link-header {
+        display: none;
+    }
+    .current-title {
+        font-size: 0.92rem;
+        max-width: 140px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .top-actions {
+        gap: 0.35rem;
+    }
+    .voice-picker-wrap, .speed-picker-wrap {
+        padding: 0.25rem 0.45rem;
+    }
+    .voice-select-dropdown {
+        max-width: 85px;
+        font-size: 0.76rem;
+    }
+    .speed-select-dropdown {
+        font-size: 0.76rem;
+    }
+    .icon-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 0.85rem;
+    }
+    .content-area {
+        padding: 1.25rem 0.85rem 3.5rem;
+    }
+    .visual-module {
+        padding: 1.25rem 1rem;
+    }
+    .hero-vibrant-card {
+        padding: 1.5rem 1.15rem;
+    }
+    .hero-vibrant-card h1 {
+        font-size: 1.45rem;
+    }
+    .sit-card-actions {
+        flex-wrap: wrap;
+        gap: 0.4rem;
+    }
+    .sit-action-btn {
+        padding: 0.3rem 0.65rem;
+        font-size: 0.78rem;
+    }
+    .reason-color-box {
+        padding: 1.15rem 1rem;
+    }
+    .practice-situation-card {
+        padding: 1.25rem 1rem;
+    }
+    .sit-ideas-box, .sit-sample-box {
+        padding: 1rem 0.85rem;
+    }
+    .reason-note-box {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .login-card-vibrant {
+        padding: 2rem 1.25rem;
+        width: 95%;
+        max-width: 400px;
+    }
+    .login-card-vibrant h2 {
+        font-size: 1.25rem !important;
+    }
+    .chunk-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
 }
 
 /* Gentle Pastel Slot Badge for Placeholders */
@@ -1722,6 +1819,7 @@ body.dark-theme .sit-badge-num.purple { background: #581c87; color: #e9d5ff; }
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    flex-wrap: wrap;
 }
 
 .sit-action-btn {
