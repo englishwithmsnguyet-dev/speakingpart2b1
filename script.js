@@ -209,6 +209,33 @@ function initAuth() {
     const GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSc1mIvmT7FQBOL415zz3Hm4iQBHJZqziNla9Z70Ozm4ihIqwA/formResponse";
     const ENTRY_FIELD = "entry.388968236";
 
+    const validStudentsCB206 = [
+        "Nguyễn Thị Vân Anh",
+        "Nguyễn Thị Hồng Duyên",
+        "Nguyễn Thị Thúy Hồng",
+        "Trương Ngọc Nhi",
+        "Nguyễn Phạm Như Quỳnh",
+        "Trần Lê Quỳnh",
+        "Ông Lê Thành",
+        "Trần Nguyễn Thanh Thảo",
+        "Phan Nhật Thiện",
+        "Trần Thị Cẩm Tiên",
+        "Võ Trần Bảo Tính",
+        "Trương Thanh Toàn",
+        "Phạm Ngọc Trâm",
+        "Nguyễn Võ Bảo Trân"
+    ];
+
+    const normalizeStr = (str) => {
+        return (str || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[đĐ]/g, 'd')
+            .toLowerCase()
+            .replace(/\s+/g, ' ')
+            .trim();
+    };
+
     // Pre-fill previously saved name and class for student convenience
     const savedName = localStorage.getItem('vstep_sp2_name') || '';
     const savedClass = localStorage.getItem('vstep_sp2_class') || '';
@@ -224,11 +251,9 @@ function initAuth() {
 
     let isSubmitting = false;
 
-    window.finishLogin = () => {
-        const nameVal = nameInput ? nameInput.value.trim() : '';
-        const classVal = classInput ? classInput.value.trim() : '';
-        const finalName = nameVal || savedName || 'Học viên';
-        const finalClass = classVal || savedClass || 'VSTEP-B1';
+    window.finishLogin = (finalName, finalClass) => {
+        finalName = finalName || state.student.name || 'Học viên';
+        finalClass = finalClass || state.student.classCode || 'CB206';
 
         state.student.name = finalName;
         state.student.classCode = finalClass;
@@ -272,6 +297,45 @@ function initAuth() {
             return;
         }
 
+        const formattedClass = classVal.toUpperCase().replace(/\s+/g, '');
+        const normName = normalizeStr(nameVal);
+
+        // 1. Kiểm tra tài khoản Giáo viên ("Ngoài tôi ra")
+        const isTeacher = (formattedClass === 'GV' || formattedClass === 'GV2026' || formattedClass === '2026' || formattedClass === 'CB206') &&
+                          (normName === 'ptmn' || normName === 'pham thi minh nguyet' || normName === 'minh nguyet' || normName === 'co nguyet' || normName === 'ms nguyet' || normName === 'nguyet');
+
+        let finalName = '';
+        let finalClass = '';
+
+        if (isTeacher) {
+            finalName = normName === 'ptmn' ? 'Cô Nguyệt (PTMN)' : (nameVal || 'Cô Nguyệt');
+            finalClass = formattedClass === 'CB206' ? 'CB206 (GV)' : (formattedClass || 'GV');
+        } else {
+            // 2. Học viên: Chỉ chấp nhận lớp CB206
+            if (formattedClass !== 'CB206') {
+                if (errorMsg) {
+                    errorMsg.textContent = 'Mã lớp không hợp lệ! Vui lòng nhập đúng lớp CB206.';
+                    errorMsg.style.display = 'block';
+                }
+                if (classInput) classInput.focus();
+                return;
+            }
+
+            // 3. Học viên: Kiểm tra đúng danh sách học viên lớp CB206
+            const matchedStudent = validStudentsCB206.find(s => normalizeStr(s) === normName);
+            if (!matchedStudent) {
+                if (errorMsg) {
+                    errorMsg.textContent = 'Họ và tên không thuộc danh sách lớp CB206. Vui lòng kiểm tra lại!';
+                    errorMsg.style.display = 'block';
+                }
+                if (nameInput) nameInput.focus();
+                return;
+            }
+
+            finalName = matchedStudent;
+            finalClass = 'CB206';
+        }
+
         if (errorMsg) errorMsg.style.display = 'none';
         isSubmitting = true;
 
@@ -280,9 +344,12 @@ function initAuth() {
             startBtn.innerHTML = '<span>Đang vào lớp...</span> <i class="fa-solid fa-spinner fa-spin"></i>';
         }
 
-        const logData = `${nameVal} - Lớp: ${classVal}`;
+        state.student.name = finalName;
+        state.student.classCode = finalClass;
 
-        // 1. Submit via hidden iframe for guaranteed delivery
+        const logData = `${finalName} - Lớp: ${finalClass}`;
+
+        // Gửi thông tin về Google Form (dual-channel)
         if (trackingForm && entryInput) {
             entryInput.value = logData;
             window.submitted = true;
@@ -293,7 +360,6 @@ function initAuth() {
             }
         }
 
-        // 2. Parallel fetch with no-cors
         try {
             const formData = new FormData();
             formData.append(ENTRY_FIELD, logData);
@@ -306,10 +372,10 @@ function initAuth() {
             console.warn('Fetch init warn:', e);
         }
 
-        // 3. Fallback timeout to ensure login completes even if iframe onload is blocked by browser
+        // Fallback timeout sau 1s
         setTimeout(() => {
             if (welcomeModal && (!welcomeModal.classList.contains('hidden') || welcomeModal.style.display !== 'none')) {
-                window.finishLogin();
+                window.finishLogin(finalName, finalClass);
             }
         }, 1000);
     }
