@@ -445,6 +445,7 @@ function initNavigation() {
     const sidebar = document.getElementById('sidebar');
     const sidebarBackdrop = document.getElementById('sidebar-backdrop');
     const topTitle = document.getElementById('top-title');
+    const mobileToggle = document.getElementById('mobile-toggle');
 
     function closeSidebar() {
         if (sidebar) sidebar.classList.remove('open');
@@ -958,17 +959,26 @@ window.copyText = function(text) {
 
 function playBeep(freq = 440, duration = 0.15) {
     try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return;
+        if (!window._audioCtx) {
+            window._audioCtx = new AudioContextClass();
+        }
+        if (window._audioCtx.state === 'suspended') {
+            window._audioCtx.resume();
+        }
+        const ctx = window._audioCtx;
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-        osc.frequency.value = freq;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
         osc.connect(gain);
         gain.connect(ctx.destination);
         osc.start();
-        gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + duration);
-        setTimeout(() => { osc.stop(); ctx.close(); }, duration * 1000);
+        osc.stop(ctx.currentTime + duration);
     } catch (e) {
-        console.log('AudioContext not allowed');
+        console.log('AudioContext notice:', e);
     }
 }
 
@@ -1223,6 +1233,9 @@ function formatExamPromptOptions(prompt) {
 
 // Global function to launch exam with any situation
 window.startExamWithPrompt = function(promptText) {
+    if (window.resetExamTimer) {
+        window.resetExamTimer();
+    }
     const promptDisplay = document.getElementById('exam-prompt-content');
     if (promptDisplay) {
         let cleanPrompt = promptText.trim();
@@ -1306,6 +1319,7 @@ function initExamTimerAndRecorder() {
     const phaseBadge = document.getElementById('timer-phase-badge');
     const statusHint = document.getElementById('exam-status-hint');
     const startBtn = document.getElementById('timer-start-btn');
+    const pauseBtn = document.getElementById('timer-pause-btn');
     const skipBtn = document.getElementById('timer-skip-btn');
     const finishBtn = document.getElementById('timer-finish-btn');
     const resetBtn = document.getElementById('timer-reset-btn');
@@ -1314,6 +1328,8 @@ function initExamTimerAndRecorder() {
     
     const listenPromptBtn = document.getElementById('exam-listen-prompt-btn');
     const randomPromptBtn = document.getElementById('exam-random-prompt-btn');
+    const examTransBtn = document.getElementById('exam-toggle-trans-btn');
+    const examTransBox = document.getElementById('exam-translation-box');
     const clearNotesBtn = document.getElementById('clear-notes-btn');
     const scratchpad = document.getElementById('exam-scratchpad');
     
@@ -1346,6 +1362,21 @@ function initExamTimerAndRecorder() {
         });
     }
 
+    if (examTransBtn && examTransBox) {
+        examTransBtn.addEventListener('click', () => {
+            const isHidden = examTransBox.classList.toggle('hidden');
+            if (isHidden) {
+                examTransBtn.innerHTML = '<i class="fa-solid fa-language"></i> Dịch đề thi';
+                examTransBtn.style.color = '';
+                examTransBtn.style.background = '';
+            } else {
+                examTransBtn.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Ẩn bản dịch';
+                examTransBtn.style.color = 'var(--primary)';
+                examTransBtn.style.background = '#dbeafe';
+            }
+        });
+    }
+
     if (clearNotesBtn && scratchpad) {
         clearNotesBtn.addEventListener('click', () => {
             scratchpad.value = '';
@@ -1366,7 +1397,7 @@ function initExamTimerAndRecorder() {
         const seconds = state.timer.timeLeft % 60;
         timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
-        const progress = state.timer.timeLeft / state.timer.totalTime;
+        const progress = state.timer.totalTime > 0 ? (state.timer.timeLeft / state.timer.totalTime) : 0;
         const offset = CIRCLE_CIRCUMFERENCE - (progress * CIRCLE_CIRCUMFERENCE);
         if (progressCircle) {
             progressCircle.style.strokeDashoffset = offset;
@@ -1406,10 +1437,15 @@ function initExamTimerAndRecorder() {
     async function startRecordingAudio() {
         audioChunks = [];
         try {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                console.warn('getUserMedia not supported on this browser/environment');
+                return;
+            }
             audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
             let options = { mimeType: 'audio/webm' };
-            if (!MediaRecorder.isTypeSupported('audio/webm')) {
-                if (MediaRecorder.isTypeSupported('audio/mp4')) {
+            if (typeof MediaRecorder === 'undefined') return;
+            if (!MediaRecorder.isTypeSupported || !MediaRecorder.isTypeSupported('audio/webm')) {
+                if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported('audio/mp4')) {
                     options = { mimeType: 'audio/mp4' };
                 } else {
                     options = {};
@@ -1418,7 +1454,7 @@ function initExamTimerAndRecorder() {
 
             mediaRecorder = new MediaRecorder(audioStream, options);
             mediaRecorder.ondataavailable = (e) => {
-                if (e.data.size > 0) {
+                if (e.data && e.data.size > 0) {
                     audioChunks.push(e.data);
                 }
             };
@@ -1457,17 +1493,17 @@ function initExamTimerAndRecorder() {
 
             if (micVisualizer) micVisualizer.classList.remove('hidden');
         } catch (err) {
-            console.warn('Microphone access error:', err);
-            showToast('⚠️ Không thể bật micro. Vui lòng cấp quyền micro cho trang web để ghi âm nhé!');
+            console.warn('Microphone access notice:', err);
+            showToast('⚠️ Chưa bật được micro. Đồng hồ vẫn tiếp tục đếm giờ!');
         }
     }
 
     function stopRecordingAudio() {
         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-            mediaRecorder.stop();
+            try { mediaRecorder.stop(); } catch(e) {}
         }
         if (audioStream) {
-            audioStream.getTracks().forEach(track => track.stop());
+            try { audioStream.getTracks().forEach(track => track.stop()); } catch(e) {}
             audioStream = null;
         }
         if (recognition) {
@@ -1478,6 +1514,7 @@ function initExamTimerAndRecorder() {
 
     function setPhase(phase) {
         state.timer.phase = phase;
+        state.timer.isPaused = false;
 
         if (phase === 'prep') {
             state.timer.timeLeft = 60;
@@ -1488,10 +1525,16 @@ function initExamTimerAndRecorder() {
             statusHint.innerHTML = 'Đang trong <strong>1 phút chuẩn bị</strong>. Hãy đọc kỹ đề bài và ghi chú nhanh dàn ý vào khung nháp bên phải.';
             
             startBtn.classList.add('hidden');
+            if (pauseBtn) {
+                pauseBtn.classList.remove('hidden');
+                pauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i> Tạm dừng';
+                pauseBtn.classList.remove('primary');
+                pauseBtn.classList.add('secondary');
+            }
             skipBtn.classList.remove('hidden');
             finishBtn.classList.add('hidden');
             if (playbackBox) playbackBox.classList.add('hidden');
-            if (progressCircle) progressCircle.style.stroke = 'var(--primary-blue)';
+            if (progressCircle) progressCircle.style.stroke = 'var(--primary, #2563eb)';
             if (liveTranscript) liveTranscript.innerHTML = '<em>Sẵn sàng nhận diện lời nói khi bắt đầu ghi âm...</em>';
             if (wordCounterBadge) wordCounterBadge.textContent = '0 từ';
 
@@ -1504,6 +1547,12 @@ function initExamTimerAndRecorder() {
             statusHint.innerHTML = '<strong>Hệ thống đang ghi âm trực tiếp!</strong> Hãy tự tin trình bày trọn vẹn bài nói theo cấu trúc 3 bước.';
 
             startBtn.classList.add('hidden');
+            if (pauseBtn) {
+                pauseBtn.classList.remove('hidden');
+                pauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i> Tạm dừng';
+                pauseBtn.classList.remove('primary');
+                pauseBtn.classList.add('secondary');
+            }
             skipBtn.classList.add('hidden');
             finishBtn.classList.remove('hidden');
             if (progressCircle) progressCircle.style.stroke = '#ef4444';
@@ -1520,12 +1569,13 @@ function initExamTimerAndRecorder() {
 
             startBtn.classList.remove('hidden');
             startBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> Thi lại đề này';
+            if (pauseBtn) pauseBtn.classList.add('hidden');
             skipBtn.classList.add('hidden');
             finishBtn.classList.add('hidden');
 
             stopRecordingAudio();
             if (window.confetti) {
-                window.confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+                try { window.confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } }); } catch(e) {}
             }
             playBeep(523.25, 0.5);
             showToast('🎉 Chúc mừng bạn đã hoàn thành bài thi Speaking Part 02!');
@@ -1534,16 +1584,17 @@ function initExamTimerAndRecorder() {
             state.timer.timeLeft = 60;
             state.timer.totalTime = 60;
             phaseBadge.textContent = '⏱️ SẴN SÀNG VÀO THI';
-            phaseBadge.style.background = 'var(--primary-bg-subtle)';
-            phaseBadge.style.color = 'var(--primary-blue)';
+            phaseBadge.style.background = '#eff6ff';
+            phaseBadge.style.color = '#1e40af';
             statusHint.innerHTML = 'Nhấp <strong>"Bắt đầu làm bài"</strong> để bắt đầu 1 phút chuẩn bị. Sau 1 phút, hệ thống sẽ tự động bật micro và đếm ngược 3 phút ghi âm.';
 
             startBtn.classList.remove('hidden');
             startBtn.innerHTML = '<i class="fa-solid fa-play"></i> Bắt đầu làm bài';
+            if (pauseBtn) pauseBtn.classList.add('hidden');
             skipBtn.classList.remove('hidden');
             finishBtn.classList.add('hidden');
             if (micVisualizer) micVisualizer.classList.add('hidden');
-            if (progressCircle) progressCircle.style.stroke = 'var(--primary-blue)';
+            if (progressCircle) progressCircle.style.stroke = 'var(--primary, #2563eb)';
             stopRecordingAudio();
         }
         updateDisplay();
@@ -1578,6 +1629,37 @@ function initExamTimerAndRecorder() {
         showToast('Bắt đầu 1 phút chuẩn bị! ⏳');
     });
 
+    if (pauseBtn) {
+        pauseBtn.addEventListener('click', () => {
+            if (!state.timer.interval && !state.timer.isPaused) return;
+
+            if (!state.timer.isPaused) {
+                // Pause
+                clearInterval(state.timer.interval);
+                state.timer.interval = null;
+                state.timer.isPaused = true;
+                pauseBtn.innerHTML = '<i class="fa-solid fa-play"></i> Tiếp tục';
+                pauseBtn.classList.add('primary');
+                pauseBtn.classList.remove('secondary');
+                if (mediaRecorder && mediaRecorder.state === 'recording') {
+                    try { mediaRecorder.pause(); } catch(e) {}
+                }
+                showToast('Đã tạm dừng tính giờ ⏸️');
+            } else {
+                // Resume
+                state.timer.isPaused = false;
+                state.timer.interval = setInterval(tick, 1000);
+                pauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i> Tạm dừng';
+                pauseBtn.classList.remove('primary');
+                pauseBtn.classList.add('secondary');
+                if (mediaRecorder && mediaRecorder.state === 'paused') {
+                    try { mediaRecorder.resume(); } catch(e) {}
+                }
+                showToast('Đang tiếp tục tính giờ ▶️');
+            }
+        });
+    }
+
     skipBtn.addEventListener('click', () => {
         setPhase('speak');
         if (!state.timer.interval) {
@@ -1598,10 +1680,12 @@ function initExamTimerAndRecorder() {
             clearInterval(state.timer.interval);
             state.timer.interval = null;
         }
+        state.timer.isPaused = false;
         setPhase('idle');
     }
 
     resetBtn.addEventListener('click', resetExam);
+    window.resetExamTimer = resetExam;
 
     setPhase('idle');
 }
