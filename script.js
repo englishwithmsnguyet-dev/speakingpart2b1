@@ -565,6 +565,10 @@ function stopAllAudio() {
         activeHumanAudioPlayer.currentTime = 0;
         activeHumanAudioPlayer = null;
     }
+    if (window._speechKeepAlive) {
+        clearInterval(window._speechKeepAlive);
+        window._speechKeepAlive = null;
+    }
     audioQueue = [];
     currentQueueIndex = 0;
     isPlayingQueue = false;
@@ -624,7 +628,7 @@ function getBestNaturalVoice(voices) {
 }
 
 /**
- * Populate voice dropdown with available English voices
+ * Populate voice dropdown with available English voices matching SPEAKING PART 01 hierarchy
  */
 function populateVoices() {
     if (!('speechSynthesis' in window)) return;
@@ -634,17 +638,38 @@ function populateVoices() {
 
     if (availableVoices.length === 0) return;
 
-    const bestDefault = getBestNaturalVoice(availableVoices);
-    if (!state.selectedVoiceURI && bestDefault) {
-        state.selectedVoiceURI = bestDefault.voiceURI;
-        localStorage.setItem('vstep_voice_uri', bestDefault.voiceURI);
+    let defaultVoice = null;
+    if (state.selectedVoiceURI) {
+        defaultVoice = availableVoices.find(v => v.voiceURI === state.selectedVoiceURI);
+    }
+    if (!defaultVoice) {
+        const preferredNames = [
+            "Microsoft Guy",
+            "Google UK English Male",
+            "Google US English Male",
+            "Alex",
+            "Daniel",
+            "Google US English",
+            "Samantha"
+        ];
+        for (let name of preferredNames) {
+            defaultVoice = availableVoices.find(v => v.name && v.name.includes(name));
+            if (defaultVoice) break;
+        }
+        if (!defaultVoice) {
+            defaultVoice = getBestNaturalVoice(availableVoices);
+        }
+    }
+
+    if (!state.selectedVoiceURI && defaultVoice) {
+        state.selectedVoiceURI = defaultVoice.voiceURI;
+        localStorage.setItem('vstep_voice_uri', defaultVoice.voiceURI);
     }
 
     if (voiceSelect) {
         const currentSelected = state.selectedVoiceURI || voiceSelect.value;
         voiceSelect.innerHTML = '';
 
-        // Add a curated recommended badge if found
         availableVoices.forEach(v => {
             const opt = document.createElement('option');
             opt.value = v.voiceURI;
@@ -668,8 +693,8 @@ function populateVoices() {
 
         if (currentSelected && availableVoices.some(v => v.voiceURI === currentSelected)) {
             voiceSelect.value = currentSelected;
-        } else if (bestDefault) {
-            voiceSelect.value = bestDefault.voiceURI;
+        } else if (defaultVoice) {
+            voiceSelect.value = defaultVoice.voiceURI;
         }
     }
 }
@@ -703,8 +728,12 @@ function initSpeechSynthesis() {
     }
 
     if (speedSelect) {
-        const savedSpeed = localStorage.getItem('vstep_voice_speed');
-        if (savedSpeed) speedSelect.value = savedSpeed;
+        let savedSpeed = localStorage.getItem('vstep_voice_speed');
+        if (!savedSpeed || savedSpeed === '0.92') {
+            savedSpeed = '1.0';
+            localStorage.setItem('vstep_voice_speed', '1.0');
+        }
+        speedSelect.value = savedSpeed;
         speedSelect.addEventListener('change', (e) => {
             localStorage.setItem('vstep_voice_speed', e.target.value);
             showToast(`Tốc độ: ${e.target.options[e.target.selectedIndex].text}`);
@@ -802,7 +831,13 @@ function cleanSpokenText(raw) {
         .replace(/\s+/g, ' ')
         .trim();
 }
+window._speechKeepAlive = null;
 window.speakText = function(text, triggerBtn = null) {
+    if (!('speechSynthesis' in window)) {
+        showToast('Trình duyệt không hỗ trợ phát âm.');
+        return;
+    }
+
     if (!state.audioEnabled) {
         state.audioEnabled = true;
         const audioToggle = document.getElementById('audio-toggle');
@@ -820,102 +855,98 @@ window.speakText = function(text, triggerBtn = null) {
     }
 
     const speedSelect = document.getElementById('speed-select');
-    const speedRate = speedSelect ? (parseFloat(speedSelect.value) || 0.92) : 0.92;
-
-    // Split into sentences for human-like cadence and conversational pauses
-    const rawSentences = clean.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g) || [clean];
-    const sentences = rawSentences.map(s => s.trim()).filter(Boolean);
-
-    if (sentences.length === 0) {
-        if (triggerBtn) triggerBtn.classList.remove('btn-speaking-active');
-        return;
-    }
-
-    audioQueue = sentences;
-    currentQueueIndex = 0;
-    isPlayingQueue = true;
-
-    showToast('Đang phát âm giọng đọc tự nhiên... 🎙️');
-    playNextSentenceInQueue(speedRate, triggerBtn);
-};
-
-function playNextSentenceInQueue(speedRate, triggerBtn) {
-    if (!isPlayingQueue || currentQueueIndex >= audioQueue.length) {
-        isPlayingQueue = false;
-        if (triggerBtn) {
-            triggerBtn.classList.remove('btn-speaking-active');
-        }
-        return;
-    }
-
-    const sentence = audioQueue[currentQueueIndex];
-    currentQueueIndex++;
-
-    if (!('speechSynthesis' in window)) {
-        isPlayingQueue = false;
-        if (triggerBtn) triggerBtn.classList.remove('btn-speaking-active');
-        return;
-    }
+    const speedRate = speedSelect ? (parseFloat(speedSelect.value) || 1.0) : 1.0;
 
     try {
         if (window.speechSynthesis.paused) {
             window.speechSynthesis.resume();
         }
+        window.speechSynthesis.cancel();
 
-        const utterance = new SpeechSynthesisUtterance(sentence);
-        activeUtterance = utterance;
-
-        // Select chosen voice or best natural voice available
+        const utt = new SpeechSynthesisUtterance(clean);
+        activeUtterance = utt;
         const voices = window.speechSynthesis.getVoices() || [];
-        let chosenVoice = null;
 
+        let bestVoice = null;
         if (state.selectedVoiceURI) {
-            chosenVoice = voices.find(v => v.voiceURI === state.selectedVoiceURI);
+            bestVoice = voices.find(v => v.voiceURI === state.selectedVoiceURI);
         }
-        if (!chosenVoice) {
-            chosenVoice = getBestNaturalVoice(voices);
-        }
-
-        if (chosenVoice) {
-            utterance.voice = chosenVoice;
-            utterance.lang = chosenVoice.lang;
-        } else {
-            utterance.lang = 'en-US';
-        }
-
-        utterance.rate = speedRate;
-        utterance.pitch = 1.0;
-
-        let hasFinished = false;
-        const proceed = () => {
-            if (hasFinished) return;
-            hasFinished = true;
-            activeUtterance = null;
-            if (isPlayingQueue) {
-                // Natural conversational breathing pause between sentences (160ms)
-                setTimeout(() => {
-                    playNextSentenceInQueue(speedRate, triggerBtn);
-                }, 160);
+        if (!bestVoice) {
+            const preferredNames = [
+                "Microsoft Guy",
+                "Google UK English Male",
+                "Google US English Male",
+                "Alex",
+                "Daniel",
+                "Google US English",
+                "Samantha"
+            ];
+            for (let name of preferredNames) {
+                bestVoice = voices.find(v => v.name && v.name.includes(name));
+                if (bestVoice) break;
             }
-        };
-
-        utterance.onend = proceed;
-        utterance.onerror = (e) => {
-            console.warn('Utterance error or cancelled:', e);
-            proceed();
-        };
-
-        window.speechSynthesis.speak(utterance);
-
-        // Chrome iOS/Android keep-alive safety check
-        if (window.speechSynthesis.paused) {
-            window.speechSynthesis.resume();
+            if (!bestVoice) {
+                bestVoice = voices.find(v => v.lang && (v.lang.startsWith("en-US") || v.lang.startsWith("en-GB")) && v.name && v.name.includes("Male"));
+            }
+            if (!bestVoice) {
+                bestVoice = voices.find(v => v.lang && (v.lang.startsWith("en-US") || v.lang.startsWith("en-GB")));
+            }
+            if (!bestVoice) {
+                bestVoice = getBestNaturalVoice(voices);
+            }
+            if (!bestVoice) {
+                bestVoice = voices[0];
+            }
         }
+
+        if (bestVoice) {
+            utt.voice = bestVoice;
+            utt.lang = bestVoice.lang;
+        } else {
+            utt.lang = 'en-US';
+        }
+
+        utt.rate = speedRate; // Tốc độ chuẩn 1.0 (chuẩn SPEAKING PART 01)
+        utt.pitch = 1.25; // Cao độ sáng, trẻ trung, năng động gốc trên máy tính chuẩn SPEAKING PART 01
+
+        const cleanup = () => {
+            if (window._speechKeepAlive) {
+                clearInterval(window._speechKeepAlive);
+                window._speechKeepAlive = null;
+            }
+            activeUtterance = null;
+            if (triggerBtn) triggerBtn.classList.remove('btn-speaking-active');
+            document.querySelectorAll('.btn-speaking-active').forEach(b => b.classList.remove('btn-speaking-active'));
+        };
+
+        utt.onend = cleanup;
+        utt.onerror = (e) => {
+            console.warn('Speech utterance ended or interrupted:', e);
+            cleanup();
+        };
+
+        // Giữ kết nối âm thanh liên tục trên Chrome / Safari khi đọc bài dài
+        if (window._speechKeepAlive) clearInterval(window._speechKeepAlive);
+        window._speechKeepAlive = setInterval(() => {
+            if (!window.speechSynthesis || !window.speechSynthesis.speaking) {
+                clearInterval(window._speechKeepAlive);
+                window._speechKeepAlive = null;
+            } else {
+                window.speechSynthesis.pause();
+                window.speechSynthesis.resume();
+            }
+        }, 10000);
+
+        setTimeout(() => {
+            window.speechSynthesis.speak(utt);
+            if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+        }, 10);
+
     } catch (e) {
         console.error("Speech synthesis exception:", e);
         if (triggerBtn) triggerBtn.classList.remove('btn-speaking-active');
     }
-}
+};
 
 window.copyText = function(text) {
     navigator.clipboard.writeText(text).then(() => {
