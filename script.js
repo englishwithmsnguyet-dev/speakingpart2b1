@@ -551,9 +551,10 @@ window.switchSubTab = function(btn, subTabId) {
 let availableVoices = [];
 
 // ==========================================================================
-// STUDIO-QUALITY NATURAL HUMAN VOICE ENGINE (TYPE 1 UK & TYPE 2 US)
+// NATURAL HUMAN & NEURAL SPEECH ENGINE (Web Speech API + Smart Filtering)
 // ==========================================================================
 var activeHumanAudioPlayer = null;
+var activeUtterance = null;
 var audioQueue = [];
 var currentQueueIndex = 0;
 var isPlayingQueue = false;
@@ -570,12 +571,107 @@ function stopAllAudio() {
     if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
     }
+    activeUtterance = null;
+    document.querySelectorAll('.btn-speaking-active').forEach(b => b.classList.remove('btn-speaking-active'));
 }
 
-function getSelectedAccent() {
+/**
+ * Intelligent selector for the most natural, human-sounding English voices
+ * Prioritizes Microsoft Neural, Apple Siri/Enhanced, Google US/UK, and filters mechanical voices
+ */
+function getBestNaturalVoice(voices) {
+    if (!voices || voices.length === 0) return null;
+    const enVoices = voices.filter(v => v.lang && (v.lang.toLowerCase().startsWith('en') || v.lang.toLowerCase().startsWith('us')));
+    if (enVoices.length === 0) return null;
+
+    // 1. Highest priority: Modern Neural / Natural / Premium / Studio / Enhanced / Siri
+    const premiumKeywords = ['natural', 'premium', 'enhanced', 'neural', 'studio', 'siri', 'wavenet'];
+    for (const kw of premiumKeywords) {
+        const match = enVoices.find(v => (v.name && v.name.toLowerCase().includes(kw)) || (v.voiceURI && v.voiceURI.toLowerCase().includes(kw)));
+        if (match) return match;
+    }
+
+    // 2. High-quality Apple modern human voices (macOS & iOS)
+    const appleModernNames = ['ava', 'evan', 'allison', 'zoe', 'nathan', 'oliver', 'serena', 'daniel', 'samantha (enhanced)'];
+    for (const name of appleModernNames) {
+        const match = enVoices.find(v => v.name && v.name.toLowerCase().includes(name));
+        if (match) return match;
+    }
+
+    // 3. Desktop browser / Windows Natural voices
+    const desktopModern = ['jenny', 'guy', 'aria', 'google us english', 'google uk english female'];
+    for (const name of desktopModern) {
+        const match = enVoices.find(v => v.name && v.name.toLowerCase().includes(name));
+        if (match) return match;
+    }
+
+    // 4. Exclude legacy mechanical robotic voices if alternatives exist
+    const nonRobotic = enVoices.filter(v => {
+        const n = (v.name || '').toLowerCase();
+        return !n.includes('alex') && !n.includes('fred') && !n.includes('victoria') &&
+               !n.includes('ralph') && !n.includes('zarvox') && !n.includes('trinoids') &&
+               !n.includes('bells') && !n.includes('bad news') && !n.includes('organ') &&
+               !n.includes('cellos') && !n.includes('junior');
+    });
+
+    if (nonRobotic.length > 0) {
+        return nonRobotic.find(v => v.lang.includes('US') || v.lang.includes('en-US')) ||
+               nonRobotic.find(v => v.lang.includes('GB') || v.lang.includes('en-GB')) ||
+               nonRobotic[0];
+    }
+
+    return enVoices[0];
+}
+
+/**
+ * Populate voice dropdown with available English voices
+ */
+function populateVoices() {
+    if (!('speechSynthesis' in window)) return;
     const voiceSelect = document.getElementById('voice-select');
-    if (voiceSelect && voiceSelect.value === 'uk') return { tl: 'en-GB', type: 1 };
-    return { tl: 'en-US', type: 2 };
+    const voices = window.speechSynthesis.getVoices() || [];
+    availableVoices = voices.filter(v => v.lang && (v.lang.toLowerCase().startsWith('en') || v.lang.toLowerCase().startsWith('us')));
+
+    if (availableVoices.length === 0) return;
+
+    const bestDefault = getBestNaturalVoice(availableVoices);
+    if (!state.selectedVoiceURI && bestDefault) {
+        state.selectedVoiceURI = bestDefault.voiceURI;
+        localStorage.setItem('vstep_voice_uri', bestDefault.voiceURI);
+    }
+
+    if (voiceSelect) {
+        const currentSelected = state.selectedVoiceURI || voiceSelect.value;
+        voiceSelect.innerHTML = '';
+
+        // Add a curated recommended badge if found
+        availableVoices.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v.voiceURI;
+            let label = v.name
+                .replace('Microsoft ', '')
+                .replace('Online (Natural) - English (United States)', 'US (Tự nhiên ✨)')
+                .replace('Online (Natural) - English (United Kingdom)', 'UK (Tự nhiên ✨)')
+                .replace(' - English (United States)', ' (US)')
+                .replace(' - English (United Kingdom)', ' (UK)');
+
+            const isNeural = /natural|neural|siri|enhanced|premium|studio/i.test(v.name);
+            if (isNeural) {
+                label = `✨ ${label}`;
+            } else {
+                label = `🎙️ ${label}`;
+            }
+
+            opt.textContent = `${label} [${v.lang}]`;
+            voiceSelect.appendChild(opt);
+        });
+
+        if (currentSelected && availableVoices.some(v => v.voiceURI === currentSelected)) {
+            voiceSelect.value = currentSelected;
+        } else if (bestDefault) {
+            voiceSelect.value = bestDefault.voiceURI;
+        }
+    }
 }
 
 function initSpeechSynthesis() {
@@ -583,17 +679,25 @@ function initSpeechSynthesis() {
     const speedSelect = document.getElementById('speed-select');
     const audioToggle = document.getElementById('audio-toggle');
 
-    if (voiceSelect) {
-        voiceSelect.innerHTML = `
-            <option value="us" selected>🇺🇸 Giọng Mỹ Chuẩn (Studio US - Audio 2)</option>
-            <option value="uk">🇬🇧 Giọng Anh Chuẩn (Studio UK - Audio 1)</option>
-        `;
-        const savedAccent = localStorage.getItem('vstep_voice_accent');
-        if (savedAccent) voiceSelect.value = savedAccent;
+    if ('speechSynthesis' in window) {
+        populateVoices();
+        window.speechSynthesis.onvoiceschanged = () => populateVoices();
+        
+        // Touch handler for mobile Safari / Chrome audio unlock
+        window.addEventListener('touchstart', () => {
+            if (window.speechSynthesis && (!availableVoices || availableVoices.length === 0)) {
+                window.speechSynthesis.getVoices();
+                populateVoices();
+            }
+        }, { once: true });
+    }
 
+    if (voiceSelect) {
         voiceSelect.addEventListener('change', (e) => {
-            localStorage.setItem('vstep_voice_accent', e.target.value);
-            showToast(`Đã chọn: ${e.target.options[e.target.selectedIndex].text}`);
+            state.selectedVoiceURI = e.target.value;
+            localStorage.setItem('vstep_voice_uri', e.target.value);
+            const selectedOpt = voiceSelect.options[voiceSelect.selectedIndex];
+            showToast(`Đã chọn: ${selectedOpt ? selectedOpt.text : 'Giọng tự nhiên'}`);
             speakText("Well, let's practice speaking naturally and fluently.");
         });
     }
@@ -614,7 +718,7 @@ function initSpeechSynthesis() {
             if (!state.audioEnabled) {
                 stopAllAudio();
             }
-            showToast(state.audioEnabled ? 'Đã bật âm thanh phát âm' : 'Đã tắt âm thanh');
+            showToast(state.audioEnabled ? 'Đã bật âm thanh giọng mẫu' : 'Đã tắt âm thanh');
         });
     }
 }
@@ -711,53 +815,31 @@ window.speakText = function(text, triggerBtn = null) {
     if (!clean) return;
 
     // Visual button feedback
-    let originalHtml = '';
     if (triggerBtn) {
-        originalHtml = triggerBtn.innerHTML;
         triggerBtn.classList.add('btn-speaking-active');
     }
 
-    const { tl, type } = getSelectedAccent();
     const speedSelect = document.getElementById('speed-select');
-    const speedRate = speedSelect ? (parseFloat(speedSelect.value) || 1.0) : 1.0;
+    const speedRate = speedSelect ? (parseFloat(speedSelect.value) || 0.92) : 0.92;
 
-    // For short single words or phrases (Flashcards / Vocabulary)
-    const isSingleWord = clean.split(/\s+/).length <= 4 && clean.length < 35;
-    if (isSingleWord) {
-        const studioWordUrl = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(clean)}&type=${type}`;
-        activeHumanAudioPlayer = new Audio(studioWordUrl);
-        activeHumanAudioPlayer.playbackRate = speedRate;
-
-        activeHumanAudioPlayer.play().catch(() => {
-            // Fallback to HD Neural stream
-            playHdNeuralStream(clean, tl, speedRate, triggerBtn, originalHtml);
-        });
-
-        activeHumanAudioPlayer.onended = () => {
-            if (triggerBtn) {
-                triggerBtn.classList.remove('btn-speaking-active');
-            }
-        };
-        showToast('Đang phát âm giọng đọc bản ngữ... 🎙️');
-        return;
-    }
-
-    // For full sentences, paragraphs and sample answers:
-    // Split into sentences for crystal clear HD streaming
+    // Split into sentences for human-like cadence and conversational pauses
     const rawSentences = clean.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g) || [clean];
     const sentences = rawSentences.map(s => s.trim()).filter(Boolean);
 
-    if (sentences.length === 0) return;
+    if (sentences.length === 0) {
+        if (triggerBtn) triggerBtn.classList.remove('btn-speaking-active');
+        return;
+    }
 
     audioQueue = sentences;
     currentQueueIndex = 0;
     isPlayingQueue = true;
 
-    showToast('Đang phát âm bài nói chuẩn bản ngữ... 🎙️');
-    playNextInQueue(tl, speedRate, triggerBtn, originalHtml);
+    showToast('Đang phát âm giọng đọc tự nhiên... 🎙️');
+    playNextSentenceInQueue(speedRate, triggerBtn);
 };
 
-function playNextInQueue(tl, speedRate, triggerBtn, originalHtml) {
+function playNextSentenceInQueue(speedRate, triggerBtn) {
     if (!isPlayingQueue || currentQueueIndex >= audioQueue.length) {
         isPlayingQueue = false;
         if (triggerBtn) {
@@ -769,63 +851,70 @@ function playNextInQueue(tl, speedRate, triggerBtn, originalHtml) {
     const sentence = audioQueue[currentQueueIndex];
     currentQueueIndex++;
 
-    const hdAudioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${tl}&q=${encodeURIComponent(sentence)}`;
-    activeHumanAudioPlayer = new Audio(hdAudioUrl);
-    activeHumanAudioPlayer.playbackRate = speedRate;
-
-    activeHumanAudioPlayer.play().then(() => {
-        activeHumanAudioPlayer.onended = () => {
-            setTimeout(() => {
-                playNextInQueue(tl, speedRate, triggerBtn, originalHtml);
-            }, 180); // natural pause between sentences
-        };
-    }).catch(err => {
-        console.warn("HD stream fallback to browser voice:", err);
-        fallbackBrowserVoice(sentence, () => {
-            playNextInQueue(tl, speedRate, triggerBtn, originalHtml);
-        });
-    });
-}
-
-function playHdNeuralStream(text, tl, speedRate, triggerBtn, originalHtml) {
-    const hdAudioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${tl}&q=${encodeURIComponent(text)}`;
-    activeHumanAudioPlayer = new Audio(hdAudioUrl);
-    activeHumanAudioPlayer.playbackRate = speedRate;
-
-    activeHumanAudioPlayer.play().then(() => {
-        activeHumanAudioPlayer.onended = () => {
-            if (triggerBtn) triggerBtn.classList.remove('btn-speaking-active');
-        };
-    }).catch(() => {
-        fallbackBrowserVoice(text, () => {
-            if (triggerBtn) triggerBtn.classList.remove('btn-speaking-active');
-        });
-    });
-}
-
-function fallbackBrowserVoice(text, onEndCallback) {
     if (!('speechSynthesis' in window)) {
-        if (onEndCallback) onEndCallback();
+        isPlayingQueue = false;
+        if (triggerBtn) triggerBtn.classList.remove('btn-speaking-active');
         return;
     }
-    const utterance = new SpeechSynthesisUtterance(text);
-    const { tl } = getSelectedAccent();
-    utterance.lang = tl;
-    utterance.rate = 0.95;
-    utterance.pitch = 1.02;
 
-    const voices = window.speechSynthesis.getVoices();
-    const best = voices.find(v => v.lang.replace('_', '-').startsWith(tl)) || voices[0];
-    if (best) utterance.voice = best;
+    try {
+        if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+        }
 
-    utterance.onend = () => {
-        if (onEndCallback) onEndCallback();
-    };
-    utterance.onerror = () => {
-        if (onEndCallback) onEndCallback();
-    };
+        const utterance = new SpeechSynthesisUtterance(sentence);
+        activeUtterance = utterance;
 
-    window.speechSynthesis.speak(utterance);
+        // Select chosen voice or best natural voice available
+        const voices = window.speechSynthesis.getVoices() || [];
+        let chosenVoice = null;
+
+        if (state.selectedVoiceURI) {
+            chosenVoice = voices.find(v => v.voiceURI === state.selectedVoiceURI);
+        }
+        if (!chosenVoice) {
+            chosenVoice = getBestNaturalVoice(voices);
+        }
+
+        if (chosenVoice) {
+            utterance.voice = chosenVoice;
+            utterance.lang = chosenVoice.lang;
+        } else {
+            utterance.lang = 'en-US';
+        }
+
+        utterance.rate = speedRate;
+        utterance.pitch = 1.0;
+
+        let hasFinished = false;
+        const proceed = () => {
+            if (hasFinished) return;
+            hasFinished = true;
+            activeUtterance = null;
+            if (isPlayingQueue) {
+                // Natural conversational breathing pause between sentences (160ms)
+                setTimeout(() => {
+                    playNextSentenceInQueue(speedRate, triggerBtn);
+                }, 160);
+            }
+        };
+
+        utterance.onend = proceed;
+        utterance.onerror = (e) => {
+            console.warn('Utterance error or cancelled:', e);
+            proceed();
+        };
+
+        window.speechSynthesis.speak(utterance);
+
+        // Chrome iOS/Android keep-alive safety check
+        if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+        }
+    } catch (e) {
+        console.error("Speech synthesis exception:", e);
+        if (triggerBtn) triggerBtn.classList.remove('btn-speaking-active');
+    }
 }
 
 window.copyText = function(text) {

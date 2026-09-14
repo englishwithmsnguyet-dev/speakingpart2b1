@@ -359,6 +359,8 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
     font-weight: 500;
     outline: none;
     cursor: pointer;
+    max-width: 170px;
+    text-overflow: ellipsis;
 }
 
 .icon-btn {
