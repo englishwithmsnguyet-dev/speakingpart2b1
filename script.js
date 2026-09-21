@@ -34,6 +34,20 @@ window.toggleSampleAnswer = function(btn) {
 
     const isHidden = sampleBox.classList.contains('hidden') || sampleBox.style.display === 'none';
     if (isHidden) {
+        // Tự động đóng tab gợi ý ý tưởng nếu đang mở để chuyển tab qua ngay lập tức
+        const ideasBox = card.querySelector('.sit-ideas-box');
+        if (ideasBox) {
+            ideasBox.classList.add('hidden');
+            ideasBox.style.display = 'none';
+        }
+        const ideasBtn = card.querySelector('.btn-ideas-toggle');
+        if (ideasBtn) {
+            ideasBtn.innerHTML = '<i class="fa-solid fa-lightbulb"></i> Xem ý tưởng gợi ý';
+            ideasBtn.style.color = '';
+            ideasBtn.style.borderColor = '';
+            ideasBtn.style.background = '';
+        }
+
         sampleBox.classList.remove('hidden');
         sampleBox.style.display = 'block';
         btn.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Ẩn bài mẫu';
@@ -65,6 +79,20 @@ window.toggleIdeas = function(btn) {
 
     const isHidden = ideasBox.classList.contains('hidden') || ideasBox.style.display === 'none';
     if (isHidden) {
+        // Tự động đóng tab bài mẫu nếu đang mở để chuyển tab qua ngay lập tức
+        const sampleBox = card.querySelector('.sit-sample-box');
+        if (sampleBox) {
+            sampleBox.classList.add('hidden');
+            sampleBox.style.display = 'none';
+        }
+        const sampleBtn = card.querySelector('.btn-sample-toggle');
+        if (sampleBtn) {
+            sampleBtn.innerHTML = '<i class="fa-solid fa-graduation-cap"></i> Xem bài mẫu';
+            sampleBtn.style.color = '';
+            sampleBtn.style.borderColor = '';
+            sampleBtn.style.background = '';
+        }
+
         ideasBox.classList.remove('hidden');
         ideasBox.style.display = 'block';
         btn.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Ẩn ý tưởng gợi ý';
