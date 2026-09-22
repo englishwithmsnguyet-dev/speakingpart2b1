@@ -30,44 +30,38 @@ window.toggleSampleAnswer = function(btn) {
     const card = btn.closest('.practice-situation-card') || btn.closest('.prompt-banner-box') || btn.closest('.sample-spotlight');
     if (!card) return;
     const sampleBox = card.querySelector('.sit-sample-box');
+    const ideasBox = card.querySelector('.sit-ideas-box');
+    const ideasBtn = card.querySelector('.btn-ideas-toggle');
+    const sampleBtn = card.querySelector('.btn-sample-toggle') || btn;
     if (!sampleBox) return;
 
-    const isHidden = sampleBox.classList.contains('hidden') || sampleBox.style.display === 'none';
-    if (isHidden) {
-        // Tự động đóng tab gợi ý ý tưởng nếu đang mở để chuyển tab qua ngay lập tức
-        const ideasBox = card.querySelector('.sit-ideas-box');
+    const isCurrentlyActive = sampleBtn.classList.contains('active-tab-sample') && !sampleBox.classList.contains('hidden') && sampleBox.style.display !== 'none';
+
+    if (isCurrentlyActive) {
+        // Thu gọn khi bấm lại chính tab đang mở
+        sampleBox.classList.add('hidden');
+        sampleBox.style.display = 'none';
+        sampleBtn.classList.remove('active-tab-sample');
+    } else {
+        // Chuyển sang Tab Bài nói mẫu mượt mà tức thì, không cần bấm Ẩn
         if (ideasBox) {
             ideasBox.classList.add('hidden');
             ideasBox.style.display = 'none';
         }
-        const ideasBtn = card.querySelector('.btn-ideas-toggle');
         if (ideasBtn) {
-            ideasBtn.innerHTML = '<i class="fa-solid fa-lightbulb"></i> Xem ý tưởng gợi ý';
-            ideasBtn.style.color = '';
-            ideasBtn.style.borderColor = '';
-            ideasBtn.style.background = '';
+            ideasBtn.classList.remove('active-tab-ideas');
         }
 
         sampleBox.classList.remove('hidden');
         sampleBox.style.display = 'block';
-        btn.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Ẩn bài mẫu';
-        btn.style.color = '#7c3aed';
-        btn.style.borderColor = '#7c3aed';
-        btn.style.background = 'rgba(124, 58, 237, 0.08)';
-        
-        // Ensure active panel inside is visible
+        sampleBtn.classList.add('active-tab-sample');
+
+        // Đảm bảo panel bài mẫu bên trong hiển thị
         const activePanel = sampleBox.querySelector('.sit-sample-opt-panel:not(.hidden)') || sampleBox.querySelector('.sit-sample-opt-panel');
         if (activePanel) {
             activePanel.classList.remove('hidden');
             activePanel.style.display = 'block';
         }
-    } else {
-        sampleBox.classList.add('hidden');
-        sampleBox.style.display = 'none';
-        btn.innerHTML = '<i class="fa-solid fa-graduation-cap"></i> Xem bài mẫu';
-        btn.style.color = '';
-        btn.style.borderColor = '';
-        btn.style.background = '';
     }
 };
 
@@ -75,38 +69,73 @@ window.toggleIdeas = function(btn) {
     const card = btn.closest('.practice-situation-card') || btn.closest('.prompt-banner-box') || btn.closest('.sample-spotlight');
     if (!card) return;
     const ideasBox = card.querySelector('.sit-ideas-box');
+    const sampleBox = card.querySelector('.sit-sample-box');
+    const sampleBtn = card.querySelector('.btn-sample-toggle');
+    const ideasBtn = card.querySelector('.btn-ideas-toggle') || btn;
     if (!ideasBox) return;
 
-    const isHidden = ideasBox.classList.contains('hidden') || ideasBox.style.display === 'none';
-    if (isHidden) {
-        // Tự động đóng tab bài mẫu nếu đang mở để chuyển tab qua ngay lập tức
-        const sampleBox = card.querySelector('.sit-sample-box');
+    const isCurrentlyActive = ideasBtn.classList.contains('active-tab-ideas') && !ideasBox.classList.contains('hidden') && ideasBox.style.display !== 'none';
+
+    if (isCurrentlyActive) {
+        // Thu gọn khi bấm lại chính tab đang mở
+        ideasBox.classList.add('hidden');
+        ideasBox.style.display = 'none';
+        ideasBtn.classList.remove('active-tab-ideas');
+    } else {
+        // Chuyển sang Tab Gợi ý ý tưởng mượt mà tức thì, không cần bấm Ẩn
         if (sampleBox) {
             sampleBox.classList.add('hidden');
             sampleBox.style.display = 'none';
         }
-        const sampleBtn = card.querySelector('.btn-sample-toggle');
         if (sampleBtn) {
-            sampleBtn.innerHTML = '<i class="fa-solid fa-graduation-cap"></i> Xem bài mẫu';
-            sampleBtn.style.color = '';
-            sampleBtn.style.borderColor = '';
-            sampleBtn.style.background = '';
+            sampleBtn.classList.remove('active-tab-sample');
         }
 
         ideasBox.classList.remove('hidden');
         ideasBox.style.display = 'block';
-        btn.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Ẩn ý tưởng gợi ý';
-        btn.style.color = '#d97706';
-        btn.style.borderColor = '#d97706';
-        btn.style.background = 'rgba(217, 119, 6, 0.08)';
-    } else {
+        ideasBtn.classList.add('active-tab-ideas');
+
+        // Đảm bảo panel ý tưởng bên trong hiển thị
+        const activePanel = ideasBox.querySelector('.sit-ideas-opt-panel:not(.hidden)') || ideasBox.querySelector('.sit-ideas-opt-panel');
+        if (activePanel) {
+            activePanel.classList.remove('hidden');
+            activePanel.style.display = 'block';
+        }
+    }
+};
+
+window.closeSitPanel = function(btn) {
+    const card = btn.closest('.practice-situation-card') || btn.closest('.prompt-banner-box') || btn.closest('.sample-spotlight');
+    if (!card) return;
+    const ideasBox = card.querySelector('.sit-ideas-box');
+    const sampleBox = card.querySelector('.sit-sample-box');
+    const ideasBtn = card.querySelector('.btn-ideas-toggle');
+    const sampleBtn = card.querySelector('.btn-sample-toggle');
+
+    if (ideasBox) {
         ideasBox.classList.add('hidden');
         ideasBox.style.display = 'none';
-        btn.innerHTML = '<i class="fa-solid fa-lightbulb"></i> Xem ý tưởng gợi ý';
-        btn.style.color = '';
-        btn.style.borderColor = '';
-        btn.style.background = '';
     }
+    if (sampleBox) {
+        sampleBox.classList.add('hidden');
+        sampleBox.style.display = 'none';
+    }
+    if (ideasBtn) ideasBtn.classList.remove('active-tab-ideas');
+    if (sampleBtn) sampleBtn.classList.remove('active-tab-sample');
+};
+
+window.switchToSample = function(btn) {
+    const card = btn.closest('.practice-situation-card') || btn.closest('.prompt-banner-box') || btn.closest('.sample-spotlight');
+    if (!card) return;
+    const sampleBtn = card.querySelector('.btn-sample-toggle');
+    if (sampleBtn) window.toggleSampleAnswer(sampleBtn);
+};
+
+window.switchToIdeas = function(btn) {
+    const card = btn.closest('.practice-situation-card') || btn.closest('.prompt-banner-box') || btn.closest('.sample-spotlight');
+    if (!card) return;
+    const ideasBtn = card.querySelector('.btn-ideas-toggle');
+    if (ideasBtn) window.toggleIdeas(ideasBtn);
 };
 
 window.switchIdeaCard = function(btn, panelId) {
