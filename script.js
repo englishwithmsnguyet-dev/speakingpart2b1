@@ -357,16 +357,27 @@ function initAuth() {
         const formattedClass = classVal.toUpperCase().replace(/\s+/g, '');
         const normName = normalizeStr(nameVal);
 
-        // 1. Kiểm tra tài khoản Giáo viên ("Ngoài tôi ra")
-        const isTeacher = (formattedClass === 'GV' || formattedClass === 'GV2026' || formattedClass === '2026' || formattedClass === 'CB206') &&
-                          (normName === 'ptmn' || normName === 'pham thi minh nguyet' || normName === 'minh nguyet' || normName === 'co nguyet' || normName === 'ms nguyet' || normName === 'nguyet');
+        // 1. Kiểm tra tài khoản Giáo viên (Cô Nguyệt / PTMN / GV)
+        const isTeacher = 
+            formattedClass === 'GV' || 
+            formattedClass === 'GV2026' || 
+            formattedClass === '2026' || 
+            formattedClass === 'ADMIN' ||
+            formattedClass === 'TEACHER' ||
+            normName.includes('ptmn') || 
+            normName.includes('co nguyet') || 
+            normName.includes('minh nguyet') || 
+            normName.includes('ms nguyet') || 
+            normName.includes('pham thi minh nguyet') ||
+            normName === 'nguyet' ||
+            normName.includes('giao vien');
 
         let finalName = '';
         let finalClass = '';
 
         if (isTeacher) {
-            finalName = normName === 'ptmn' ? 'Cô Nguyệt (PTMN)' : (nameVal || 'Cô Nguyệt');
-            finalClass = formattedClass === 'CB206' ? 'CB206 (GV)' : (formattedClass || 'GV');
+            finalName = nameVal || 'Cô Nguyệt (PTMN)';
+            finalClass = formattedClass || 'GV';
         } else {
             // 2. Học viên: Chỉ chấp nhận lớp CB206
             if (formattedClass !== 'CB206') {
