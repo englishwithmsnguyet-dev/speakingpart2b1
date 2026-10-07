@@ -283,6 +283,24 @@ function initAuth() {
         "Nguyễn Võ Bảo Trân"
     ];
 
+    const validStudentsCB219 = [
+        "Lưu Thị Vân Anh",
+        "Nguyễn Tuấn Anh",
+        "Trần Thị Huỳnh Duy",
+        "Duy Thị Huỳnh Hân",
+        "Trần Thị Xuân Hoa",
+        "Nguyễn Phạm Khang",
+        "Đặng Văn Khánh",
+        "Chim Nhật Luân",
+        "Lư Vĩnh Phúc",
+        "Nguyễn Chí Thiện",
+        "Trần Thị Ngọc Thơ",
+        "Huỳnh Yến Trang",
+        "Thị Thu Trinh",
+        "Nguyễn Thị Mỹ Xuyên",
+        "Nguyễn Như Ý"
+    ];
+
     const normalizeStr = (str) => {
         return (str || '')
             .normalize('NFD')
@@ -379,29 +397,39 @@ function initAuth() {
             finalName = nameVal || 'Cô Nguyệt (PTMN)';
             finalClass = formattedClass || 'GV';
         } else {
-            // 2. Học viên: Chỉ chấp nhận lớp CB206
-            if (formattedClass !== 'CB206') {
+            // 2. Học viên: Chấp nhận lớp CB219 hoặc CB206
+            if (formattedClass === 'CB219') {
+                const matchedStudent = validStudentsCB219.find(s => normalizeStr(s) === normName);
+                if (!matchedStudent) {
+                    if (errorMsg) {
+                        errorMsg.textContent = 'Họ và tên không thuộc danh sách lớp CB219. Vui lòng kiểm tra lại!';
+                        errorMsg.style.display = 'block';
+                    }
+                    if (nameInput) nameInput.focus();
+                    return;
+                }
+                finalName = matchedStudent;
+                finalClass = 'CB219';
+            } else if (formattedClass === 'CB206') {
+                const matchedStudent = validStudentsCB206.find(s => normalizeStr(s) === normName);
+                if (!matchedStudent) {
+                    if (errorMsg) {
+                        errorMsg.textContent = 'Họ và tên không thuộc danh sách lớp CB206. Vui lòng kiểm tra lại!';
+                        errorMsg.style.display = 'block';
+                    }
+                    if (nameInput) nameInput.focus();
+                    return;
+                }
+                finalName = matchedStudent;
+                finalClass = 'CB206';
+            } else {
                 if (errorMsg) {
-                    errorMsg.textContent = 'Mã lớp không hợp lệ! Vui lòng nhập đúng lớp CB206.';
+                    errorMsg.textContent = 'Mã lớp không hợp lệ! Vui lòng nhập đúng lớp (Ví dụ: CB219, CB206).';
                     errorMsg.style.display = 'block';
                 }
                 if (classInput) classInput.focus();
                 return;
             }
-
-            // 3. Học viên: Kiểm tra đúng danh sách học viên lớp CB206
-            const matchedStudent = validStudentsCB206.find(s => normalizeStr(s) === normName);
-            if (!matchedStudent) {
-                if (errorMsg) {
-                    errorMsg.textContent = 'Họ và tên không thuộc danh sách lớp CB206. Vui lòng kiểm tra lại!';
-                    errorMsg.style.display = 'block';
-                }
-                if (nameInput) nameInput.focus();
-                return;
-            }
-
-            finalName = matchedStudent;
-            finalClass = 'CB206';
         }
 
         if (errorMsg) errorMsg.style.display = 'none';
