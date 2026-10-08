@@ -663,7 +663,7 @@ window.groupLockManager = {
             return;
         }
 
-        // 4. Lớp CB213: Mở được tới Nhóm 3 (Địa điểm), nhưng khóa Thực hành (trừ Nhóm Địa điểm)
+        // 4. Lớp CB213: Mở được tới Nhóm 3 (Địa điểm), mở Thực hành cho Chọn Quà và Địa Điểm
         if (pass === 'CB213') {
             if (group.level <= 3) {
                 if (!state.unlockedGroups.includes(targetId)) {
@@ -674,7 +674,7 @@ window.groupLockManager = {
                 this.updateSidebarLockUI();
                 this.applyPracticeLockForCB213();
                 this.closeModal();
-                if (targetId === 'group-location') {
+                if (targetId === 'group-gift' || targetId === 'group-location') {
                     showToast(`🎉 Mở khóa thành công ${group.name} (Bao gồm phần Thực hành) cho lớp CB213!`, 3500);
                 } else {
                     showToast(`🎉 Mở khóa thành công ${group.name} (Phần Thực hành tạm khóa cho CB213)!`, 3500);
@@ -723,10 +723,10 @@ window.groupLockManager = {
     },
 
     applyPracticeLockForCB213() {
-        // Cập nhật các nút tab Thực hành (Riêng nhóm Địa Điểm: loc-v-practice được mở khóa)
+        // Cập nhật các nút tab Thực hành (Nhóm Chọn Quà: gift-v-practice & Nhóm Địa Điểm: loc-v-practice được mở khóa)
         document.querySelectorAll('button[onclick*="-practice"]').forEach(btn => {
             const onclickAttr = btn.getAttribute('onclick') || '';
-            if (onclickAttr.includes('loc-v-practice')) {
+            if (onclickAttr.includes('gift-v-practice') || onclickAttr.includes('loc-v-practice')) {
                 btn.classList.remove('practice-tab-locked-btn');
                 const icon = btn.querySelector('.fa-lock');
                 if (icon) icon.remove();
@@ -906,10 +906,12 @@ window.switchSubTab = function(btn, subTabId) {
                     (state.currentUnlockRole === 'CB213') || 
                     (state.lockedPractice === true && !state.isTeacher);
 
-    // Mở khóa phần Thực hành ở nhóm Địa điểm (loc-v-practice) cho CB213
-    const isLocationPractice = subTabId === 'loc-v-practice' || subTabId.includes('loc-') || (parentContainer && parentContainer.id === 'group-location');
+    // Mở khóa phần Thực hành ở nhóm Chọn Quà (gift-v-practice) và nhóm Địa Điểm (loc-v-practice) cho CB213
+    const isAllowedPractice = subTabId === 'gift-v-practice' || subTabId === 'loc-v-practice' || 
+                              subTabId.includes('gift-') || subTabId.includes('loc-') || 
+                              (parentContainer && (parentContainer.id === 'group-gift' || parentContainer.id === 'group-location'));
 
-    if (isPracticeTab && isCB213 && !isLocationPractice) {
+    if (isPracticeTab && isCB213 && !isAllowedPractice) {
         showToast('🔒 Phần Tình huống Thực hành này tạm thời bị khóa đối với lớp CB213. Vui lòng liên hệ Giáo viên!', 4000);
         return;
     }
