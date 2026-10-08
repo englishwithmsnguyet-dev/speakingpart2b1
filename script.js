@@ -215,6 +215,10 @@ const state = {
         name: localStorage.getItem('vstep_sp2_name') || '',
         classCode: localStorage.getItem('vstep_sp2_class') || ''
     },
+    isTeacher: false,
+    unlockedGroups: [], // Danh sách ID nhóm tình huống đã mở khóa
+    lockedPractice: false, // Bật khi mở khóa quyền CB213 (khóa bài thực hành)
+    currentUnlockRole: '', // 'CB210', 'CB211', 'CB213', 'GV'
     audioEnabled: true,
     selectedVoiceURI: localStorage.getItem('vstep_voice_uri') || null,
     theme: localStorage.getItem('vstep_theme') || 'light',
@@ -234,6 +238,7 @@ function initApp() {
     initAuth();
     initTheme();
     initNavigation();
+    if (window.groupLockManager) window.groupLockManager.init();
     initSpeechSynthesis();
     initAnswerBuilder();
     initExamTimerAndRecorder();
@@ -266,21 +271,23 @@ function initAuth() {
     const GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSc1mIvmT7FQBOL415zz3Hm4iQBHJZqziNla9Z70Ozm4ihIqwA/formResponse";
     const ENTRY_FIELD = "entry.388968236";
 
-    const validStudentsCB206 = [
-        "Nguyễn Thị Vân Anh",
-        "Nguyễn Thị Hồng Duyên",
-        "Nguyễn Thị Thúy Hồng",
-        "Trương Ngọc Nhi",
-        "Nguyễn Phạm Như Quỳnh",
-        "Trần Lê Quỳnh",
-        "Ông Lê Thành",
-        "Trần Nguyễn Thanh Thảo",
-        "Phan Nhật Thiện",
-        "Trần Thị Cẩm Tiên",
-        "Võ Trần Bảo Tính",
-        "Trương Thanh Toàn",
-        "Phạm Ngọc Trâm",
-        "Nguyễn Võ Bảo Trân"
+    const validStudentsCB210 = [
+        "Nguyễn Võ Thành Đạt", "Lê Huỳnh Thanh Duy", "Nguyễn Cao Kỳ Duyên", "Đào Ngọc Hân", 
+        "Trần Văn Hữu", "Trần Văn Kim Khoa", "Nguyễn Thanh Nâng", "Huỳnh Kỳ Nguyên", 
+        "Võ Thị Kim Nguyên", "Võ Hùng Sanh", "Trần Thị Thanh Thảo", "Đặng Thị Kim Thoa", 
+        "Trần Thị Tiên Tiên", "Lê Kim Tuyền"
+    ];
+
+    const validStudentsCB211 = [
+        "Hồ Anh Quân", "Lê Thành Nghiệp", "Lê Khánh Lâm", "Huỳnh Thị Ngọc Thắm", 
+        "Mai Trần Xuân Mai", "Lê Thị Uyển Nhi", "Nguyễn Thụy Thanh Trúc"
+    ];
+
+    const validStudentsCB213 = [
+        "Nguyễn Quốc Anh", "Hoàng Hợp Minh Châu", "Đặng Châu Gia Huy", "Trần Minh Tuệ Mẩn", 
+        "Đặng Thị Trúc Măng", "Trương Thị Kha My", "Ngô Diễm My", "Chiêm Chúc Ngân", 
+        "Huỳnh Thị Yến Nhi", "Phạm Nguyễn Tâm Như", "Phạm Nhựt Tiến", "Lê Thị Tú Trinh", 
+        "Trần Ngọc Vinh"
     ];
 
     const validStudentsCB219 = [
@@ -300,6 +307,13 @@ function initAuth() {
         "Nguyễn Thị Mỹ Xuyên",
         "Nguyễn Như Ý"
     ];
+
+    const CLASS_ROSTERS = {
+        'CB210': validStudentsCB210,
+        'CB211': validStudentsCB211,
+        'CB213': validStudentsCB213,
+        'CB219': validStudentsCB219
+    };
 
     const normalizeStr = (str) => {
         return (str || '')
@@ -328,7 +342,7 @@ function initAuth() {
 
     window.finishLogin = (finalName, finalClass) => {
         finalName = finalName || state.student.name || 'Học viên';
-        finalClass = finalClass || state.student.classCode || 'CB206';
+        finalClass = finalClass || state.student.classCode || 'CB210';
 
         state.student.name = finalName;
         state.student.classCode = finalClass;
@@ -337,6 +351,14 @@ function initAuth() {
 
         if (displayName) displayName.textContent = `${finalName} (${finalClass})`;
         if (userProfile) userProfile.classList.remove('hidden');
+
+        if (state.isTeacher && window.groupLockManager) {
+            window.groupLockManager.unlockAllForTeacher();
+        } else if (finalClass === 'CB213' && window.groupLockManager) {
+            state.lockedPractice = true;
+            state.currentUnlockRole = 'CB213';
+            window.groupLockManager.applyPracticeLockForCB213();
+        }
 
         if (welcomeModal) {
             welcomeModal.style.opacity = '0';
@@ -382,6 +404,7 @@ function initAuth() {
             formattedClass === '2026' || 
             formattedClass === 'ADMIN' ||
             formattedClass === 'TEACHER' ||
+            formattedClass === 'MISSNGUYET2026' ||
             normName.includes('ptmn') || 
             normName.includes('co nguyet') || 
             normName.includes('minh nguyet') || 
@@ -396,40 +419,32 @@ function initAuth() {
         if (isTeacher) {
             finalName = nameVal || 'Cô Nguyệt (PTMN)';
             finalClass = formattedClass || 'GV';
+            state.isTeacher = true;
         } else {
-            // 2. Học viên: Chấp nhận lớp CB219 hoặc CB206
-            if (formattedClass === 'CB219') {
-                const matchedStudent = validStudentsCB219.find(s => normalizeStr(s) === normName);
-                if (!matchedStudent) {
-                    if (errorMsg) {
-                        errorMsg.textContent = 'Họ và tên không thuộc danh sách lớp CB219. Vui lòng kiểm tra lại!';
-                        errorMsg.style.display = 'block';
-                    }
-                    if (nameInput) nameInput.focus();
-                    return;
-                }
-                finalName = matchedStudent;
-                finalClass = 'CB219';
-            } else if (formattedClass === 'CB206') {
-                const matchedStudent = validStudentsCB206.find(s => normalizeStr(s) === normName);
-                if (!matchedStudent) {
-                    if (errorMsg) {
-                        errorMsg.textContent = 'Họ và tên không thuộc danh sách lớp CB206. Vui lòng kiểm tra lại!';
-                        errorMsg.style.display = 'block';
-                    }
-                    if (nameInput) nameInput.focus();
-                    return;
-                }
-                finalName = matchedStudent;
-                finalClass = 'CB206';
-            } else {
+            // 2. Học viên: Chỉ chấp nhận 4 lớp: CB210, CB211, CB213, CB219
+            const roster = CLASS_ROSTERS[formattedClass];
+            if (!roster) {
                 if (errorMsg) {
-                    errorMsg.textContent = 'Mã lớp không hợp lệ! Vui lòng nhập đúng lớp (Ví dụ: CB219, CB206).';
+                    errorMsg.textContent = 'Mã lớp không hợp lệ! Web chỉ nhận các lớp CB210, CB211, CB213, CB219.';
                     errorMsg.style.display = 'block';
                 }
                 if (classInput) classInput.focus();
                 return;
             }
+
+            const matchedStudent = roster.find(s => normalizeStr(s) === normName);
+            if (!matchedStudent) {
+                if (errorMsg) {
+                    errorMsg.textContent = `Họ và tên không thuộc danh sách lớp ${formattedClass}. Vui lòng kiểm tra lại!`;
+                    errorMsg.style.display = 'block';
+                }
+                if (nameInput) nameInput.focus();
+                return;
+            }
+
+            finalName = matchedStudent;
+            finalClass = formattedClass;
+            state.isTeacher = false;
         }
 
         if (errorMsg) errorMsg.style.display = 'none';
@@ -515,7 +530,233 @@ function initAuth() {
 }
 
 /* ==========================================================================
-   2. THEME & NAVIGATION
+   2. GROUP LOCK MANAGER & ACCESS CONTROL
+   ========================================================================== */
+const SITUATION_GROUPS = [
+    { id: 'group-gift', level: 1, name: '1. Chọn Quà Tặng' },
+    { id: 'group-activity', level: 2, name: '2. Chọn Hoạt Động' },
+    { id: 'group-location', level: 3, name: '3. Chọn Địa Điểm' },
+    { id: 'group-transport', level: 4, name: '4. Chọn Phương Tiện' },
+    { id: 'group-solution', level: 5, name: '5. Chọn Giải Pháp' },
+    { id: 'group-career', level: 6, name: '6. Chọn Nghề Nghiệp' },
+    { id: 'group-factor', level: 7, name: '7. Chọn Yếu Tố' },
+    { id: 'group-form', level: 8, name: '8. Chọn Hình Thức' },
+    { id: 'group-other', level: 9, name: '9. Những Đề Khó Khác' }
+];
+
+const TEACHER_CODES = ['GV', 'GV2026', '2026', 'ADMIN', 'TEACHER', 'MISSNGUYET2026'];
+
+window.groupLockManager = {
+    pendingTargetId: null,
+
+    isSituationGroup(targetId) {
+        return SITUATION_GROUPS.some(g => g.id === targetId);
+    },
+
+    getGroupInfo(targetId) {
+        return SITUATION_GROUPS.find(g => g.id === targetId) || null;
+    },
+
+    isGroupUnlocked(targetId) {
+        if (state.isTeacher) return true;
+        if (!this.isSituationGroup(targetId)) return true;
+        return state.unlockedGroups.includes(targetId);
+    },
+
+    promptUnlock(targetId) {
+        const group = this.getGroupInfo(targetId);
+        if (!group) return;
+
+        this.pendingTargetId = targetId;
+        const modal = document.getElementById('group-unlock-modal');
+        const titleEl = document.getElementById('unlock-modal-title');
+        const inputEl = document.getElementById('unlock-pass-input');
+        const errEl = document.getElementById('unlock-error');
+
+        if (titleEl) titleEl.textContent = `MỞ KHÓA ${group.name.toUpperCase()}`;
+        if (errEl) {
+            errEl.style.display = 'none';
+            errEl.textContent = '';
+        }
+        if (inputEl) {
+            // Tự động điền mã lớp đã đăng nhập để học viên thao tác thuận tiện
+            inputEl.value = state.student.classCode || '';
+        }
+
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                if (inputEl) inputEl.focus();
+            }, 100);
+        }
+    },
+
+    closeModal() {
+        const modal = document.getElementById('group-unlock-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+        }
+        this.pendingTargetId = null;
+    },
+
+    submitUnlock() {
+        const inputEl = document.getElementById('unlock-pass-input');
+        const errEl = document.getElementById('unlock-error');
+        if (!inputEl) return;
+
+        const pass = inputEl.value.trim().toUpperCase().replace(/\s+/g, '');
+        if (!pass) {
+            if (errEl) {
+                errEl.textContent = 'Vui lòng nhập mật khẩu (Mã lớp)!';
+                errEl.style.display = 'block';
+            }
+            inputEl.focus();
+            return;
+        }
+
+        const targetId = this.pendingTargetId;
+        const group = this.getGroupInfo(targetId);
+        if (!group) {
+            this.closeModal();
+            return;
+        }
+
+        // 1. Kiểm tra tài khoản Giáo viên
+        if (TEACHER_CODES.includes(pass)) {
+            this.unlockAllForTeacher();
+            this.closeModal();
+            showToast('🎉 Giáo viên: Đã mở khóa toàn bộ nội dung!', 3500);
+            if (window.switchTabDirectly) window.switchTabDirectly(targetId);
+            return;
+        }
+
+        // 2. Lớp CB219: Chưa mở được
+        if (pass === 'CB219') {
+            if (errEl) {
+                errEl.textContent = '❌ Lớp CB219 chưa được mở khóa nội dung này. Vui lòng liên hệ Giáo viên!';
+                errEl.style.display = 'block';
+            }
+            inputEl.focus();
+            return;
+        }
+
+        // 3. Lớp CB210, CB211: Mở được tới Nhóm 3 (Địa điểm)
+        if (pass === 'CB210' || pass === 'CB211') {
+            if (group.level <= 3) {
+                if (!state.unlockedGroups.includes(targetId)) {
+                    state.unlockedGroups.push(targetId);
+                }
+                state.currentUnlockRole = pass;
+                this.updateSidebarLockUI();
+                this.closeModal();
+                showToast(`🎉 Mở khóa thành công ${group.name} cho lớp ${pass}!`, 3500);
+                if (window.switchTabDirectly) window.switchTabDirectly(targetId);
+            } else {
+                if (errEl) {
+                    errEl.textContent = `❌ Lớp ${pass} chỉ được mở khóa tới Nhóm 3 (Địa Điểm). Nhóm này chưa được mở!`;
+                    errEl.style.display = 'block';
+                }
+                inputEl.focus();
+            }
+            return;
+        }
+
+        // 4. Lớp CB213: Mở được tới Nhóm 3 (Địa điểm), nhưng khóa Thực hành
+        if (pass === 'CB213') {
+            if (group.level <= 3) {
+                if (!state.unlockedGroups.includes(targetId)) {
+                    state.unlockedGroups.push(targetId);
+                }
+                state.lockedPractice = true;
+                state.currentUnlockRole = 'CB213';
+                this.updateSidebarLockUI();
+                this.applyPracticeLockForCB213();
+                this.closeModal();
+                showToast(`🎉 Mở khóa thành công ${group.name} (Phần Thực hành tạm khóa cho CB213)!`, 3500);
+                if (window.switchTabDirectly) window.switchTabDirectly(targetId);
+            } else {
+                if (errEl) {
+                    errEl.textContent = '❌ Lớp CB213 chỉ được mở khóa tới Nhóm 3 (Địa Điểm). Nhóm này chưa được mở!';
+                    errEl.style.display = 'block';
+                }
+                inputEl.focus();
+            }
+            return;
+        }
+
+        // 5. Mật khẩu không đúng
+        if (errEl) {
+            errEl.textContent = '❌ Mật khẩu (Mã lớp) không chính xác! Vui lòng kiểm tra lại.';
+            errEl.style.display = 'block';
+        }
+        inputEl.focus();
+    },
+
+    unlockAllForTeacher() {
+        state.isTeacher = true;
+        state.lockedPractice = false;
+        state.currentUnlockRole = 'GV';
+        state.unlockedGroups = SITUATION_GROUPS.map(g => g.id);
+        this.updateSidebarLockUI();
+        this.removePracticeLocks();
+    },
+
+    updateSidebarLockUI() {
+        document.querySelectorAll('.nav-item').forEach(item => {
+            const target = item.dataset.target;
+            if (this.isSituationGroup(target)) {
+                if (this.isGroupUnlocked(target)) {
+                    item.classList.remove('locked-group');
+                    item.classList.add('unlocked-group');
+                } else {
+                    item.classList.add('locked-group');
+                    item.classList.remove('unlocked-group');
+                }
+            }
+        });
+    },
+
+    applyPracticeLockForCB213() {
+        // Cập nhật các nút tab Thực hành
+        document.querySelectorAll('button[onclick*="-practice"]').forEach(btn => {
+            btn.classList.add('practice-tab-locked-btn');
+            if (!btn.querySelector('.fa-lock')) {
+                const icon = document.createElement('i');
+                icon.className = 'fa-solid fa-lock';
+                icon.style.marginLeft = '6px';
+                btn.appendChild(icon);
+            }
+        });
+    },
+
+    removePracticeLocks() {
+        document.querySelectorAll('.practice-tab-locked-btn').forEach(btn => {
+            btn.classList.remove('practice-tab-locked-btn');
+            const icon = btn.querySelector('.fa-lock');
+            if (icon) icon.remove();
+        });
+    },
+
+    init() {
+        const cancelBtn = document.getElementById('btn-cancel-unlock');
+        const submitBtn = document.getElementById('btn-submit-unlock');
+        const inputEl = document.getElementById('unlock-pass-input');
+
+        if (cancelBtn) cancelBtn.addEventListener('click', () => this.closeModal());
+        if (submitBtn) submitBtn.addEventListener('click', () => this.submitUnlock());
+        if (inputEl) {
+            inputEl.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') this.submitUnlock();
+            });
+        }
+        this.updateSidebarLockUI();
+    }
+};
+
+/* ==========================================================================
+   3. THEME & NAVIGATION
    ========================================================================== */
 function initTheme() {
     const themeToggle = document.getElementById('theme-toggle');
@@ -549,6 +790,16 @@ function initNavigation() {
     }
 
     function switchTab(targetId) {
+        // Kiểm tra bảo vệ mật khẩu nếu là nhóm tình huống chưa mở
+        if (window.groupLockManager && !window.groupLockManager.isGroupUnlocked(targetId)) {
+            window.groupLockManager.promptUnlock(targetId);
+            return;
+        }
+
+        switchTabDirectly(targetId);
+    }
+
+    function switchTabDirectly(targetId) {
         navItems.forEach(item => {
             if (item.dataset.target === targetId) {
                 item.classList.add('active');
@@ -567,7 +818,10 @@ function initNavigation() {
 
         const activeNavItem = document.querySelector(`.nav-item[data-target="${targetId}"]`);
         if (activeNavItem) {
-            topTitle.textContent = activeNavItem.querySelector('span').textContent.replace('📖 ', '').toUpperCase();
+            const spanEl = activeNavItem.querySelector('span');
+            if (spanEl) {
+                topTitle.textContent = spanEl.textContent.replace('📖 ', '').toUpperCase();
+            }
         }
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -577,13 +831,17 @@ function initNavigation() {
         }
     }
 
+    window.switchTabDirectly = switchTabDirectly;
+
     navItems.forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
             const target = item.dataset.target;
             if (target) {
                 switchTab(target);
-                history.pushState(null, null, `#${target}`);
+                if (window.groupLockManager && window.groupLockManager.isGroupUnlocked(target)) {
+                    history.pushState(null, null, `#${target}`);
+                }
             }
         });
     });
@@ -615,7 +873,11 @@ function initNavigation() {
     // Hash check on load
     const currentHash = window.location.hash.replace('#', '');
     if (currentHash && document.getElementById(currentHash)) {
-        switchTab(currentHash);
+        if (window.groupLockManager && !window.groupLockManager.isGroupUnlocked(currentHash)) {
+            switchTabDirectly('overview');
+        } else {
+            switchTab(currentHash);
+        }
     }
 }
 
@@ -624,6 +886,17 @@ window.switchSubTab = function(btn, subTabId) {
     const parentContainer = btn.closest('.tab-pane');
     if (!parentContainer) return;
     
+    // Kiểm tra nếu là tab THỰC HÀNH và quyền là CB213
+    const isPracticeTab = subTabId.includes('-practice') || (btn.textContent && btn.textContent.includes('THỰC HÀNH'));
+    const isCB213 = (state.student && state.student.classCode === 'CB213') || 
+                    (state.currentUnlockRole === 'CB213') || 
+                    (state.lockedPractice === true && !state.isTeacher);
+
+    if (isPracticeTab && isCB213) {
+        showToast('🔒 Phần Tình huống Thực hành tạm thời bị khóa đối với lớp CB213. Vui lòng liên hệ Giáo viên!', 4000);
+        return;
+    }
+
     const allBtns = parentContainer.querySelectorAll('.cat-subtab-btn, .clean-subtab-btn, button[onclick*="switchSubTab"]');
     const allPanels = parentContainer.querySelectorAll('.sub-tab-panel');
 
