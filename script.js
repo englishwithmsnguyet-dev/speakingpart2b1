@@ -268,7 +268,7 @@ function initAuth() {
     const trackingForm = document.getElementById('tracking-form');
     const entryInput = document.getElementById('entry_388968236');
 
-    const GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSc1mIvmT7FQBOL415zz3Hm4iQBHJZqziNla9Z70Ozm4ihIqwA/formResponse";
+    const GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeqT7y3ZgUdI0cH7oHxDRRhBir0WNpqHFf4zzSGB2g4ASdmsA/formResponse";
     const ENTRY_FIELD = "entry.388968236";
 
     const validStudentsCB210 = [
