@@ -354,6 +354,9 @@ function initAuth() {
 
         if (state.isTeacher && window.groupLockManager) {
             window.groupLockManager.unlockAllForTeacher();
+        } else if (finalClass === 'CB210' && window.groupLockManager) {
+            state.currentUnlockRole = 'CB210';
+            window.groupLockManager.applyPracticeLockForCB210();
         } else if (finalClass === 'CB213' && window.groupLockManager) {
             state.lockedPractice = true;
             state.currentUnlockRole = 'CB213';
@@ -642,20 +645,47 @@ window.groupLockManager = {
             return;
         }
 
-        // 3. Lớp CB210, CB211: Mở được tới Nhóm 3 (Địa điểm)
-        if (pass === 'CB210' || pass === 'CB211') {
+        // 3. Lớp CB211: Mở được tới Nhóm 3 (Địa điểm)
+        if (pass === 'CB211') {
             if (group.level <= 3) {
                 if (!state.unlockedGroups.includes(targetId)) {
                     state.unlockedGroups.push(targetId);
                 }
                 state.currentUnlockRole = pass;
                 this.updateSidebarLockUI();
+                this.removePracticeLocks();
                 this.closeModal();
-                showToast(`🎉 Mở khóa thành công ${group.name} cho lớp ${pass}!`, 3500);
+                showToast(`🎉 Mở khóa thành công ${group.name} cho lớp CB211!`, 3500);
                 if (window.switchTabDirectly) window.switchTabDirectly(targetId);
             } else {
                 if (errEl) {
-                    errEl.textContent = `❌ Lớp ${pass} chỉ được mở khóa tới Nhóm 3 (Địa Điểm). Nhóm này chưa được mở!`;
+                    errEl.textContent = '❌ Lớp CB211 chỉ được mở khóa tới Nhóm 3 (Địa Điểm). Nhóm này chưa được mở!';
+                    errEl.style.display = 'block';
+                }
+                inputEl.focus();
+            }
+            return;
+        }
+
+        // 3b. Lớp CB210: Mở được tới Nhóm 4 (Phương tiện), nhưng khóa Thực hành ở Nhóm 4
+        if (pass === 'CB210') {
+            if (group.level <= 4) {
+                if (!state.unlockedGroups.includes(targetId)) {
+                    state.unlockedGroups.push(targetId);
+                }
+                state.currentUnlockRole = 'CB210';
+                this.updateSidebarLockUI();
+                this.applyPracticeLockForCB210();
+                this.closeModal();
+                if (targetId === 'group-transport') {
+                    showToast(`🎉 Mở khóa Lý thuyết ${group.name} cho lớp CB210 (Phần Thực hành tạm khóa)!`, 3500);
+                } else {
+                    showToast(`🎉 Mở khóa thành công ${group.name} cho lớp CB210!`, 3500);
+                }
+                if (window.switchTabDirectly) window.switchTabDirectly(targetId);
+            } else {
+                if (errEl) {
+                    errEl.textContent = '❌ Lớp CB210 chỉ được mở khóa tới Nhóm 4 (Phương Tiện). Nhóm này chưa được mở!';
                     errEl.style.display = 'block';
                 }
                 inputEl.focus();
@@ -722,6 +752,26 @@ window.groupLockManager = {
         });
     },
 
+    applyPracticeLockForCB210() {
+        // Cập nhật các nút tab Thực hành cho CB210: Khóa trans-v-practice (Nhóm 4), các nhóm 1-3 mở bình thường
+        document.querySelectorAll('button[onclick*="-practice"]').forEach(btn => {
+            const onclickAttr = btn.getAttribute('onclick') || '';
+            if (onclickAttr.includes('trans-v-practice')) {
+                btn.classList.add('practice-tab-locked-btn');
+                if (!btn.querySelector('.fa-lock')) {
+                    const icon = document.createElement('i');
+                    icon.className = 'fa-solid fa-lock';
+                    icon.style.marginLeft = '6px';
+                    btn.appendChild(icon);
+                }
+            } else if (onclickAttr.includes('gift-v-practice') || onclickAttr.includes('act-v-practice') || onclickAttr.includes('loc-v-practice')) {
+                btn.classList.remove('practice-tab-locked-btn');
+                const icon = btn.querySelector('.fa-lock');
+                if (icon) icon.remove();
+            }
+        });
+    },
+
     applyPracticeLockForCB213() {
         // Cập nhật các nút tab Thực hành (Nhóm Chọn Quà: gift-v-practice & Nhóm Địa Điểm: loc-v-practice được mở khóa)
         document.querySelectorAll('button[onclick*="-practice"]').forEach(btn => {
@@ -763,7 +813,9 @@ window.groupLockManager = {
             });
         }
         this.updateSidebarLockUI();
-        if (state.student.classCode === 'CB213' || state.currentUnlockRole === 'CB213') {
+        if (state.student.classCode === 'CB210' || state.currentUnlockRole === 'CB210') {
+            this.applyPracticeLockForCB210();
+        } else if (state.student.classCode === 'CB213' || state.currentUnlockRole === 'CB213') {
             this.applyPracticeLockForCB213();
         }
     }
@@ -900,8 +952,23 @@ window.switchSubTab = function(btn, subTabId) {
     const parentContainer = btn.closest('.tab-pane');
     if (!parentContainer) return;
     
-    // Kiểm tra nếu là tab THỰC HÀNH và quyền là CB213
+    // Kiểm tra nếu là tab THỰC HÀNH
     const isPracticeTab = subTabId.includes('-practice') || (btn.textContent && btn.textContent.includes('THỰC HÀNH'));
+
+    // Kiểm tra quyền CB210: Khóa thực hành Nhóm 4 (Chọn Phương Tiện)
+    const isCB210 = (state.student && state.student.classCode === 'CB210') || 
+                    (state.currentUnlockRole === 'CB210');
+    if (isPracticeTab && isCB210 && !state.isTeacher) {
+        const isAllowedForCB210 = subTabId === 'gift-v-practice' || subTabId === 'act-v-practice' || subTabId === 'loc-v-practice' ||
+                                  subTabId.includes('gift-') || subTabId.includes('act-') || subTabId.includes('loc-') ||
+                                  (parentContainer && (parentContainer.id === 'group-gift' || parentContainer.id === 'group-activity' || parentContainer.id === 'group-location'));
+        if (!isAllowedForCB210) {
+            showToast('🔒 Phần Tình huống Thực hành Nhóm 4 tạm thời bị khóa đối với lớp CB210. Vui lòng liên hệ Giáo viên!', 4000);
+            return;
+        }
+    }
+
+    // Kiểm tra nếu là tab THỰC HÀNH và quyền là CB213
     const isCB213 = (state.student && state.student.classCode === 'CB213') || 
                     (state.currentUnlockRole === 'CB213') || 
                     (state.lockedPractice === true && !state.isTeacher);
