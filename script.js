@@ -693,9 +693,9 @@ window.groupLockManager = {
             return;
         }
 
-        // 4. Lớp CB213: Mở được tới Nhóm 3 (Địa điểm), mở Thực hành cho Chọn Quà và Địa Điểm
+        // 4. Lớp CB213: Mở được tới Nhóm 4 (Phương tiện), mở Thực hành cho Chọn Quà và Địa Điểm
         if (pass === 'CB213') {
-            if (group.level <= 3) {
+            if (group.level <= 4) {
                 if (!state.unlockedGroups.includes(targetId)) {
                     state.unlockedGroups.push(targetId);
                 }
@@ -704,7 +704,9 @@ window.groupLockManager = {
                 this.updateSidebarLockUI();
                 this.applyPracticeLockForCB213();
                 this.closeModal();
-                if (targetId === 'group-gift' || targetId === 'group-location') {
+                if (targetId === 'group-transport') {
+                    showToast(`🎉 Mở khóa Lý thuyết ${group.name} cho lớp CB213 (Phần Thực hành tạm khóa)!`, 3500);
+                } else if (targetId === 'group-gift' || targetId === 'group-location') {
                     showToast(`🎉 Mở khóa thành công ${group.name} (Bao gồm phần Thực hành) cho lớp CB213!`, 3500);
                 } else {
                     showToast(`🎉 Mở khóa thành công ${group.name} (Phần Thực hành tạm khóa cho CB213)!`, 3500);
@@ -712,7 +714,7 @@ window.groupLockManager = {
                 if (window.switchTabDirectly) window.switchTabDirectly(targetId);
             } else {
                 if (errEl) {
-                    errEl.textContent = '❌ Lớp CB213 chỉ được mở khóa tới Nhóm 3 (Địa Điểm). Nhóm này chưa được mở!';
+                    errEl.textContent = '❌ Lớp CB213 chỉ được mở khóa tới Nhóm 4 (Phương Tiện). Nhóm này chưa được mở!';
                     errEl.style.display = 'block';
                 }
                 inputEl.focus();
