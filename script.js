@@ -663,17 +663,13 @@ window.groupLockManager = {
             return;
         }
 
-        // 3. Lớp CB211: Mở được tới Nhóm 4 (Phương tiện), nhưng khóa Thực hành ở Nhóm 4
+        // 3. Lớp CB211: Mở được tới Nhóm 4 (Phương tiện). Các nhóm sau khóa.
         if (pass === 'CB211') {
             if (group.level <= 4) {
                 this.unlockForClass('CB211', 4);
                 this.applyPracticeLockForCB211();
                 this.closeModal();
-                if (targetId === 'group-transport') {
-                    showToast(`🎉 Mở khóa Lý thuyết ${group.name} cho lớp CB211 (Phần Thực hành tạm khóa)!`, 3500);
-                } else {
-                    showToast(`🎉 Mở khóa thành công ${group.name} cho lớp CB211!`, 3500);
-                }
+                showToast(`🎉 Mở khóa thành công ${group.name} cho lớp CB211!`, 3500);
                 if (window.switchTabDirectly) window.switchTabDirectly(targetId);
             } else {
                 if (errEl) {
@@ -707,17 +703,13 @@ window.groupLockManager = {
             return;
         }
 
-        // 3c. Lớp ONB103: Mở được tới Nhóm 4 (Phương tiện), nhưng khóa Thực hành ở Nhóm 4. Nhóm 1-3 mở hết.
+        // 3c. Lớp ONB103: Mở được tới Nhóm 4 (Phương tiện). Các nhóm sau khóa.
         if (pass === 'ONB103') {
             if (group.level <= 4) {
                 this.unlockForClass('ONB103', 4);
                 this.applyPracticeLockForONB103();
                 this.closeModal();
-                if (targetId === 'group-transport') {
-                    showToast(`🎉 Mở khóa Lý thuyết ${group.name} cho lớp ONB103 (Phần Thực hành tạm khóa)!`, 3500);
-                } else {
-                    showToast(`🎉 Mở khóa thành công ${group.name} cho lớp ONB103!`, 3500);
-                }
+                showToast(`🎉 Mở khóa thành công ${group.name} cho lớp ONB103!`, 3500);
                 if (window.switchTabDirectly) window.switchTabDirectly(targetId);
             } else {
                 if (errEl) {
@@ -816,18 +808,10 @@ window.groupLockManager = {
     },
 
     applyPracticeLockForCB211() {
-        // Cập nhật các nút tab Thực hành cho CB211: Khóa trans-v-practice (Nhóm 4), các nhóm 1-3 mở bình thường
+        // Cập nhật các nút tab Thực hành cho CB211: Mở Nhóm 1-4 (kể cả trans-v-practice)
         document.querySelectorAll('button[onclick*="-practice"]').forEach(btn => {
             const onclickAttr = btn.getAttribute('onclick') || '';
-            if (onclickAttr.includes('trans-v-practice')) {
-                btn.classList.add('practice-tab-locked-btn');
-                if (!btn.querySelector('.fa-lock')) {
-                    const icon = document.createElement('i');
-                    icon.className = 'fa-solid fa-lock';
-                    icon.style.marginLeft = '6px';
-                    btn.appendChild(icon);
-                }
-            } else if (onclickAttr.includes('gift-v-practice') || onclickAttr.includes('act-v-practice') || onclickAttr.includes('loc-v-practice')) {
+            if (onclickAttr.includes('gift-v-practice') || onclickAttr.includes('act-v-practice') || onclickAttr.includes('loc-v-practice') || onclickAttr.includes('trans-v-practice')) {
                 btn.classList.remove('practice-tab-locked-btn');
                 const icon = btn.querySelector('.fa-lock');
                 if (icon) icon.remove();
@@ -836,18 +820,10 @@ window.groupLockManager = {
     },
 
     applyPracticeLockForONB103() {
-        // Cập nhật các nút tab Thực hành cho ONB103: Khóa trans-v-practice (Nhóm 4), các nhóm 1-3 mở bình thường
+        // Cập nhật các nút tab Thực hành cho ONB103: Mở Nhóm 1-4 (kể cả trans-v-practice)
         document.querySelectorAll('button[onclick*="-practice"]').forEach(btn => {
             const onclickAttr = btn.getAttribute('onclick') || '';
-            if (onclickAttr.includes('trans-v-practice')) {
-                btn.classList.add('practice-tab-locked-btn');
-                if (!btn.querySelector('.fa-lock')) {
-                    const icon = document.createElement('i');
-                    icon.className = 'fa-solid fa-lock';
-                    icon.style.marginLeft = '6px';
-                    btn.appendChild(icon);
-                }
-            } else if (onclickAttr.includes('gift-v-practice') || onclickAttr.includes('act-v-practice') || onclickAttr.includes('loc-v-practice')) {
+            if (onclickAttr.includes('gift-v-practice') || onclickAttr.includes('act-v-practice') || onclickAttr.includes('loc-v-practice') || onclickAttr.includes('trans-v-practice')) {
                 btn.classList.remove('practice-tab-locked-btn');
                 const icon = btn.querySelector('.fa-lock');
                 if (icon) icon.remove();
@@ -1063,15 +1039,15 @@ window.switchSubTab = function(btn, subTabId) {
         }
     }
 
-    // 1b. Kiểm tra quyền CB211, ONB103, CB213: Mở Thực hành Nhóm 1-3, Khóa Thực hành Nhóm 4 (Chọn Phương Tiện)
-    const isGroup4PracticeLockedClass = (state.student && (state.student.classCode === 'CB211' || state.student.classCode === 'ONB103' || state.student.classCode === 'CB213')) || 
-                                       (state.currentUnlockRole === 'CB211' || state.currentUnlockRole === 'ONB103' || state.currentUnlockRole === 'CB213');
+    // 1b. Kiểm tra quyền CB213: Mở Thực hành Nhóm 1-3, Khóa Thực hành Nhóm 4 (Chọn Phương Tiện)
+    const isGroup4PracticeLockedClass = (state.student && state.student.classCode === 'CB213') || 
+                                       (state.currentUnlockRole === 'CB213');
     if (isPracticeTab && isGroup4PracticeLockedClass && !state.isTeacher) {
         const isAllowedPractice = subTabId === 'gift-v-practice' || subTabId === 'act-v-practice' || subTabId === 'loc-v-practice' ||
                                   subTabId.includes('gift-') || subTabId.includes('act-') || subTabId.includes('loc-') ||
                                   (parentContainer && (parentContainer.id === 'group-gift' || parentContainer.id === 'group-activity' || parentContainer.id === 'group-location'));
         if (!isAllowedPractice) {
-            const currentRole = state.currentUnlockRole || (state.student && state.student.classCode) || 'Lớp của bạn';
+            const currentRole = state.currentUnlockRole || (state.student && state.student.classCode) || 'CB213';
             showToast(`🔒 Phần Tình huống Thực hành Nhóm 4 tạm thời bị khóa đối với lớp ${currentRole}. Vui lòng liên hệ Giáo viên!`, 4000);
             return;
         }
