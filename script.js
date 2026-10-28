@@ -308,6 +308,24 @@ function initAuth() {
         "Nguyễn Như Ý"
     ];
 
+    const validStudentsCB220 = [
+        "Lý Quốc Dũng",
+        "Phan Minh Khôi",
+        "Huỳnh Văn My",
+        "Mai Thúy Ngân",
+        "Võ Huỳnh Thảo Nguyên",
+        "Đặng Dũ Nguyên",
+        "Nguyễn Gia Nguyễn",
+        "Trương Thị Thảo Như",
+        "Huỳnh Nhật Phát",
+        "Nguyễn Huỳnh Thanh Sơn",
+        "Thái Nhựt Thịnh",
+        "Trần Nguyễn Huỳnh Trâm",
+        "Nguyễn Thị Tường Vi",
+        "Lê Tường Vy",
+        "Bùi Ngọc Như Ý"
+    ];
+
     const validStudentsONB103 = [
         "Nguyễn Thị Duy", "Phạm Trần Mỹ Hân", "Trịnh Thị Thu Hiền", "Nguyễn Hoàng Kha",
         "Phạm Thị Út Lua", "Lê Huỳnh Diễm My", "Nguyễn Thị Ngọc Mỹ", "Huỳnh Thị Kim Ngân",
@@ -320,6 +338,7 @@ function initAuth() {
         'CB211': validStudentsCB211,
         'CB213': validStudentsCB213,
         'CB219': validStudentsCB219,
+        'CB220': validStudentsCB220,
         'ONB103': validStudentsONB103
     };
 
@@ -442,11 +461,11 @@ function initAuth() {
             finalClass = formattedClass || 'GV';
             state.isTeacher = true;
         } else {
-            // 2. Học viên: Chỉ chấp nhận các lớp: CB210, CB211, CB213, ONB103, CB219
+            // 2. Học viên: Chỉ chấp nhận các lớp: CB210, CB211, CB213, ONB103, CB219, CB220
             const roster = CLASS_ROSTERS[formattedClass];
             if (!roster) {
                 if (errorMsg) {
-                    errorMsg.textContent = 'Mã lớp không hợp lệ! Web chỉ nhận các lớp CB210, CB211, CB213, ONB103, CB219.';
+                    errorMsg.textContent = 'Mã lớp không hợp lệ! Web chỉ nhận các lớp CB210, CB211, CB213, ONB103, CB219, CB220.';
                     errorMsg.style.display = 'block';
                 }
                 if (classInput) classInput.focus();
