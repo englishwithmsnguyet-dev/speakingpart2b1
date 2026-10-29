@@ -1108,51 +1108,84 @@ function stopAllAudio() {
 }
 
 /**
- * Intelligent selector for the most natural, human-sounding English voices
- * Prioritizes Microsoft Neural, Apple Siri/Enhanced, Google US/UK, and filters mechanical voices
+ * Kiểm tra và lọc bỏ hoàn toàn các giọng nam hoặc giọng robot kỳ quặc (chuẩn SPEAKING PART 01)
+ */
+const isMaleOrUnwantedVoice = (voice) => {
+    if (!voice) return false;
+    const name = ((voice.name || '') + ' ' + (voice.voiceURI || '')).toLowerCase();
+    const blacklist = [
+        'guy', 'male', 'david', 'mark', 'george', 'alex', 'fred', 'daniel', 'albert',
+        'evan', 'nathan', 'oliver', 'tom', 'rishi', 'eddy', 'grandpa', 'jester', 'junior',
+        'ralph', 'reed', 'rocko', 'zarvox', 'wobble', 'bad news', 'bahh', 'bells',
+        'boing', 'bubbles', 'cellos', 'organ', 'superstar', 'whisper', 'trinoids',
+        'alva', 'diego', 'jorge', 'juan', 'carlos'
+    ];
+    return blacklist.some(term => name.includes(term));
+};
+
+/**
+ * Thuật toán ưu tiên GIỌNG NỮ trong trẻo, tự nhiên, dễ nghe nhất (chuẩn SPEAKING PART 01)
+ * Ưu tiên: Ava, Jenny, Aria, Samantha, Google US English Female
  */
 function getBestNaturalVoice(voices) {
     if (!voices || voices.length === 0) return null;
     const enVoices = voices.filter(v => v.lang && (v.lang.toLowerCase().startsWith('en') || v.lang.toLowerCase().startsWith('us')));
     if (enVoices.length === 0) return null;
 
-    // 1. Highest priority: Modern Neural / Natural / Premium / Studio / Enhanced / Siri
-    const premiumKeywords = ['natural', 'premium', 'enhanced', 'neural', 'studio', 'siri', 'wavenet'];
-    for (const kw of premiumKeywords) {
-        const match = enVoices.find(v => (v.name && v.name.toLowerCase().includes(kw)) || (v.voiceURI && v.voiceURI.toLowerCase().includes(kw)));
-        if (match) return match;
+    // Ưu tiên hoàn toàn các giọng Nữ
+    const femaleOnlyVoices = enVoices.filter(v => !isMaleOrUnwantedVoice(v));
+    const candidateList = femaleOnlyVoices.length > 0 ? femaleOnlyVoices : enVoices;
+
+    // Thứ tự ưu tiên chất lượng cao (Giọng Nữ Studio / Neural / Tự nhiên / Dễ nghe)
+    const femalePriorityKeywords = [
+        'ava online (natural)',
+        'microsoft ava',
+        'ava (premium)',
+        'ava (enhanced)',
+        'ava',
+        'jenny online (natural)',
+        'microsoft jenny',
+        'jenny',
+        'aria online (natural)',
+        'microsoft aria',
+        'aria',
+        'samantha (premium)',
+        'samantha (enhanced)',
+        'samantha',
+        'google us english female',
+        'google us english',
+        'google uk english female',
+        'allison',
+        'karen',
+        'victoria',
+        'kathy',
+        'sandy',
+        'shelley',
+        'serena',
+        'zoe',
+        'zira'
+    ];
+
+    for (const kw of femalePriorityKeywords) {
+        const found = candidateList.find(v => {
+            const fullName = ((v.name || '') + ' ' + (v.voiceURI || '')).toLowerCase();
+            return fullName.includes(kw);
+        });
+        if (found) return found;
     }
 
-    // 2. High-quality Apple modern human voices (macOS & iOS)
-    const appleModernNames = ['ava', 'evan', 'allison', 'zoe', 'nathan', 'oliver', 'serena', 'daniel', 'samantha (enhanced)'];
-    for (const name of appleModernNames) {
-        const match = enVoices.find(v => v.name && v.name.toLowerCase().includes(name));
-        if (match) return match;
-    }
-
-    // 3. Desktop browser / Windows Natural voices
-    const desktopModern = ['jenny', 'guy', 'aria', 'google us english', 'google uk english female'];
-    for (const name of desktopModern) {
-        const match = enVoices.find(v => v.name && v.name.toLowerCase().includes(name));
-        if (match) return match;
-    }
-
-    // 4. Exclude legacy mechanical robotic voices if alternatives exist
-    const nonRobotic = enVoices.filter(v => {
-        const n = (v.name || '').toLowerCase();
-        return !n.includes('alex') && !n.includes('fred') && !n.includes('victoria') &&
-               !n.includes('ralph') && !n.includes('zarvox') && !n.includes('trinoids') &&
-               !n.includes('bells') && !n.includes('bad news') && !n.includes('organ') &&
-               !n.includes('cellos') && !n.includes('junior');
+    // Nếu không trúng tên ưu tiên, tìm bất kỳ giọng nào có chữ 'female'
+    const anyFemale = candidateList.find(v => {
+        const fullName = ((v.name || '') + ' ' + (v.voiceURI || '')).toLowerCase();
+        return fullName.includes('female');
     });
+    if (anyFemale) return anyFemale;
 
-    if (nonRobotic.length > 0) {
-        return nonRobotic.find(v => v.lang.includes('US') || v.lang.includes('en-US')) ||
-               nonRobotic.find(v => v.lang.includes('GB') || v.lang.includes('en-GB')) ||
-               nonRobotic[0];
-    }
+    // Ưu tiên giọng en-US trong candidateList
+    const usVoice = candidateList.find(v => v.lang && (v.lang === 'en-US' || v.lang === 'en_US'));
+    if (usVoice) return usVoice;
 
-    return enVoices[0];
+    return candidateList[0];
 }
 
 /**
@@ -1162,64 +1195,52 @@ function populateVoices() {
     if (!('speechSynthesis' in window)) return;
     const voiceSelect = document.getElementById('voice-select');
     const voices = window.speechSynthesis.getVoices() || [];
-    availableVoices = voices.filter(v => v.lang && (v.lang.toLowerCase().startsWith('en') || v.lang.toLowerCase().startsWith('us')));
+    const enVoices = voices.filter(v => v.lang && (v.lang.toLowerCase().startsWith('en') || v.lang.toLowerCase().startsWith('us')));
 
-    if (availableVoices.length === 0) return;
+    if (enVoices.length === 0) return;
 
-    let defaultVoice = null;
+    // Nếu URI đã lưu là giọng nam -> tự động huỷ bỏ để dùng giọng nữ chuẩn Part 1
     if (state.selectedVoiceURI) {
-        defaultVoice = availableVoices.find(v => v.voiceURI === state.selectedVoiceURI);
-    }
-    if (!defaultVoice) {
-        const preferredNames = [
-            "Microsoft Guy",
-            "Google UK English Male",
-            "Google US English Male",
-            "Alex",
-            "Daniel",
-            "Google US English",
-            "Samantha"
-        ];
-        for (let name of preferredNames) {
-            defaultVoice = availableVoices.find(v => v.name && v.name.includes(name));
-            if (defaultVoice) break;
-        }
-        if (!defaultVoice) {
-            defaultVoice = getBestNaturalVoice(availableVoices);
+        const savedVoice = voices.find(v => v.voiceURI === state.selectedVoiceURI);
+        if (savedVoice && isMaleOrUnwantedVoice(savedVoice)) {
+            state.selectedVoiceURI = null;
+            try { localStorage.removeItem('vstep_voice_uri'); } catch(e) {}
         }
     }
 
+    const defaultVoice = getBestNaturalVoice(voices);
     if (!state.selectedVoiceURI && defaultVoice) {
         state.selectedVoiceURI = defaultVoice.voiceURI;
-        localStorage.setItem('vstep_voice_uri', defaultVoice.voiceURI);
+        try { localStorage.setItem('vstep_voice_uri', defaultVoice.voiceURI); } catch(e) {}
     }
+
+    // Chỉ hiển thị các giọng Nữ trong dropdown
+    const femaleOnly = enVoices.filter(v => !isMaleOrUnwantedVoice(v));
+    const displayList = femaleOnly.length > 0 ? femaleOnly : enVoices;
 
     if (voiceSelect) {
         const currentSelected = state.selectedVoiceURI || voiceSelect.value;
         voiceSelect.innerHTML = '';
 
-        availableVoices.forEach(v => {
+        // Tùy chọn Mặc định tự động chuẩn Part 1
+        const autoOpt = document.createElement('option');
+        autoOpt.value = defaultVoice ? defaultVoice.voiceURI : '';
+        autoOpt.textContent = `⭐ Giọng Nữ Tự Nhiên Nhất (${defaultVoice ? defaultVoice.name : 'Khuyên dùng'})`;
+        voiceSelect.appendChild(autoOpt);
+
+        displayList.forEach(v => {
             const opt = document.createElement('option');
             opt.value = v.voiceURI;
-            let label = v.name
+            let cleanName = v.name
                 .replace('Microsoft ', '')
-                .replace('Online (Natural) - English (United States)', 'US (Tự nhiên ✨)')
-                .replace('Online (Natural) - English (United Kingdom)', 'UK (Tự nhiên ✨)')
-                .replace(' - English (United States)', ' (US)')
-                .replace(' - English (United Kingdom)', ' (UK)');
-
-            const isNeural = /natural|neural|siri|enhanced|premium|studio/i.test(v.name);
-            if (isNeural) {
-                label = `✨ ${label}`;
-            } else {
-                label = `🎙️ ${label}`;
-            }
-
-            opt.textContent = `${label} [${v.lang}]`;
+                .replace('Online (Natural) - English (United States)', 'US Natural (Ava/Jenny)')
+                .replace(' - English (United States)', ' US')
+                .replace(' - English (United Kingdom)', ' UK');
+            opt.textContent = `👩 ${cleanName} (${v.lang})`;
             voiceSelect.appendChild(opt);
         });
 
-        if (currentSelected && availableVoices.some(v => v.voiceURI === currentSelected)) {
+        if (currentSelected && voices.some(v => v.voiceURI === currentSelected)) {
             voiceSelect.value = currentSelected;
         } else if (defaultVoice) {
             voiceSelect.value = defaultVoice.voiceURI;
@@ -1398,33 +1419,15 @@ window.speakText = function(text, triggerBtn = null) {
         let bestVoice = null;
         if (state.selectedVoiceURI) {
             bestVoice = voices.find(v => v.voiceURI === state.selectedVoiceURI);
+            // Nếu vô tình lưu trúng giọng nam, huỷ ngay lập tức để chọn giọng nữ
+            if (bestVoice && isMaleOrUnwantedVoice(bestVoice)) {
+                bestVoice = null;
+                state.selectedVoiceURI = null;
+                try { localStorage.removeItem('vstep_voice_uri'); } catch(e) {}
+            }
         }
         if (!bestVoice) {
-            const preferredNames = [
-                "Microsoft Guy",
-                "Google UK English Male",
-                "Google US English Male",
-                "Alex",
-                "Daniel",
-                "Google US English",
-                "Samantha"
-            ];
-            for (let name of preferredNames) {
-                bestVoice = voices.find(v => v.name && v.name.includes(name));
-                if (bestVoice) break;
-            }
-            if (!bestVoice) {
-                bestVoice = voices.find(v => v.lang && (v.lang.startsWith("en-US") || v.lang.startsWith("en-GB")) && v.name && v.name.includes("Male"));
-            }
-            if (!bestVoice) {
-                bestVoice = voices.find(v => v.lang && (v.lang.startsWith("en-US") || v.lang.startsWith("en-GB")));
-            }
-            if (!bestVoice) {
-                bestVoice = getBestNaturalVoice(voices);
-            }
-            if (!bestVoice) {
-                bestVoice = voices[0];
-            }
+            bestVoice = getBestNaturalVoice(voices);
         }
 
         if (bestVoice) {
@@ -1434,8 +1437,9 @@ window.speakText = function(text, triggerBtn = null) {
             utt.lang = 'en-US';
         }
 
-        utt.rate = speedRate; // Tốc độ chuẩn 1.0 (chuẩn SPEAKING PART 01)
-        utt.pitch = 1.25; // Cao độ sáng, trẻ trung, năng động gốc trên máy tính chuẩn SPEAKING PART 01
+        const savedSpeed = parseFloat(localStorage.getItem('vstep_voice_speed') || '0.98');
+        utt.rate = speedSelect ? (parseFloat(speedSelect.value) || savedSpeed) : savedSpeed;
+        utt.pitch = 1.15; // Giọng nữ trong trẻo, tươi sáng, chuẩn SPEAKING PART 01
 
         const cleanup = () => {
             if (window._speechKeepAlive) {
