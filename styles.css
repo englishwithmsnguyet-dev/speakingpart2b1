@@ -1853,8 +1853,8 @@ body.dark-theme .sit-badge-num.purple { background: #581c87; color: #e9d5ff; }
 }
 
 .sit-prompt-text {
-    font-size: 1.02rem;
-    line-height: 1.85;
+    font-size: 1.05rem;
+    line-height: 2.05;
     color: var(--text-main);
     text-align: justify;
     text-justify: inter-word;
@@ -1877,12 +1877,6 @@ body.dark-theme .sit-badge-num.purple { background: #581c87; color: #e9d5ff; }
 
 
 /* Highlight Options in Practice Situations (Pastel Accent) */
-.sit-prompt-text {
-    font-size: 1.05rem;
-    line-height: 2.05;
-    color: var(--text-main);
-}
-
 .sit-prompt-text strong em,
 .sit-prompt-text em strong,
 .prompt-banner strong em,
@@ -1892,11 +1886,13 @@ body.dark-theme .sit-badge-num.purple { background: #581c87; color: #e9d5ff; }
     font-weight: 700;
     color: #1d4ed8;
     background: #e0f2fe;
-    padding: 0.1rem 0.35rem;
-    border-radius: 4px;
-    border: none;
+    border: 1px solid #bae6fd;
+    padding: 0.1rem 0.45rem;
+    border-radius: 5px;
     margin: 0;
     box-shadow: none;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
 }
 
 body.dark-theme .sit-prompt-text strong em,
@@ -1905,7 +1901,7 @@ body.dark-theme .prompt-banner strong em,
 body.dark-theme .prompt-banner em strong {
     display: inline;
     background: rgba(56, 189, 248, 0.2);
-    border: none;
+    border-color: rgba(56, 189, 248, 0.35);
     color: #93c5fd;
 }
 
@@ -1951,23 +1947,30 @@ body.dark-theme .prompt-banner em strong {
 
 .exam-prompt-content {
     font-size: 1.12rem;
-    line-height: 1.95;
+    line-height: 2.05;
     color: var(--text-main);
+    text-align: justify;
+    text-justify: inter-word;
 }
 
-.exam-prompt-content strong em {
-    display: inline-block;
+.exam-prompt-content strong em,
+.exam-prompt-content em strong {
+    display: inline;
     font-style: italic;
     font-weight: 700;
     color: #1e40af;
     background: #e0f2fe;
     border: 1px solid #bae6fd;
-    padding: 0.12rem 0.6rem;
-    border-radius: 6px;
-    margin: 0.1rem 0.2rem;
+    padding: 0.12rem 0.5rem;
+    border-radius: 5px;
+    margin: 0;
+    box-shadow: none;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
 }
 
-body.dark-theme .exam-prompt-content strong em {
+body.dark-theme .exam-prompt-content strong em,
+body.dark-theme .exam-prompt-content em strong {
     background: rgba(56, 189, 248, 0.18);
     color: #93c5fd;
     border-color: rgba(56, 189, 248, 0.35);
