@@ -235,6 +235,21 @@ document.addEventListener('DOMContentLoaded', () => {
     initApp();
 });
 
+// Khởi tạo và kiểm tra giọng đọc hợp lệ (chuẩn SPEAKING PART 01 - tự huỷ nếu trước đó lưu trúng giọng nam)
+let initVoiceURI = null;
+try {
+    initVoiceURI = localStorage.getItem('vstep_voice_uri') || null;
+    if (initVoiceURI) {
+        const lower = initVoiceURI.toLowerCase();
+        if (['daniel', 'guy', 'alex', 'fred', 'david', 'mark', 'george', 'albert', 'evan', 'nathan', 'oliver', 'tom', 'rishi', 'eddy', 'zarvox'].some(m => lower.includes(m))) {
+            initVoiceURI = null;
+            localStorage.removeItem('vstep_voice_uri');
+        }
+    }
+} catch (e) {
+    initVoiceURI = null;
+}
+
 // State
 const state = {
     student: {
@@ -246,7 +261,7 @@ const state = {
     lockedPractice: false, // Bật khi mở khóa quyền CB213 (khóa bài thực hành)
     currentUnlockRole: '', // 'CB210', 'CB211', 'CB213', 'ONB103', 'GV'
     audioEnabled: true,
-    selectedVoiceURI: localStorage.getItem('vstep_voice_uri') || null,
+    selectedVoiceURI: initVoiceURI,
     theme: localStorage.getItem('vstep_theme') || 'light',
     activeTab: 'overview',
     flashcards: [],
@@ -1079,7 +1094,8 @@ window.switchSubTab = function(btn, subTabId) {
 let availableVoices = [];
 
 // ==========================================================================
-// STUDIO AI NEURAL AUDIO ENGINE & NATURAL FALLBACK (en-US-AvaNeural - Part 1)
+// NATURAL FEMALE SPEECH ENGINE (CHẨN 100% SPEAKING PART 01)
+// Samantha / Ava / Google US Female, Pitch 1.15, Rate 0.98
 // ==========================================================================
 var activeHumanAudioPlayer = null;
 var activeUtterance = null;
@@ -1087,60 +1103,6 @@ var audioQueue = [];
 var currentQueueIndex = 0;
 var isPlayingQueue = false;
 window._currentAudio = null;
-
-// Studio Audio Manifest (Real Studio AI Neural Recordings - Ava Nữ)
-window.studioAudioManifest = window.studioAudioManifest || {};
-window._normalizedAudioManifest = window._normalizedAudioManifest || {};
-
-function loadStudioAudioManifest() {
-    fetch('audio/manifest.json')
-        .then(r => {
-            if (!r.ok) throw new Error('Manifest not found');
-            return r.json();
-        })
-        .then(data => {
-            window.studioAudioManifest = data;
-            window._normalizedAudioManifest = {};
-            for (const [key, val] of Object.entries(data)) {
-                window._normalizedAudioManifest[key] = val;
-                window._normalizedAudioManifest[key.toLowerCase()] = val;
-                const alpha = key.toLowerCase().replace(/[^a-z0-9]/g, '');
-                if (alpha) window._normalizedAudioManifest[alpha] = val;
-            }
-        })
-        .catch(err => {
-            console.warn('Could not load audio/manifest.json:', err);
-        });
-}
-loadStudioAudioManifest();
-
-function findStudioAudioPath(rawText, cleanText) {
-    const m = window.studioAudioManifest || {};
-    const norm = window._normalizedAudioManifest || {};
-
-    const rawT = (rawText || '').trim();
-    const cleanT = (cleanText || '').trim();
-    const candidates = [
-        rawT,
-        cleanT,
-        rawT.replace(/\s+/g, ' '),
-        cleanT.replace(/\s+/g, ' '),
-        rawT.toLowerCase(),
-        cleanT.toLowerCase()
-    ];
-
-    for (const c of candidates) {
-        if (!c) continue;
-        if (m[c]) return m[c];
-        if (norm[c]) return norm[c];
-    }
-    const alphaRaw = rawT.toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (alphaRaw && norm[alphaRaw]) return norm[alphaRaw];
-    const alphaClean = cleanT.toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (alphaClean && norm[alphaClean]) return norm[alphaClean];
-
-    return null;
-}
 
 function stopAllAudio() {
     if (window._currentAudio) {
@@ -1253,11 +1215,10 @@ function getBestNaturalVoice(voices) {
 }
 
 /**
- * Populate voice dropdown with available English voices matching SPEAKING PART 01 hierarchy
+ * Quản lý và làm mới danh sách giọng đọc Nữ vào Modal (chuẩn SPEAKING PART 01)
  */
 function populateVoices() {
     if (!('speechSynthesis' in window)) return;
-    const voiceSelect = document.getElementById('voice-select');
     const voices = window.speechSynthesis.getVoices() || [];
     const enVoices = voices.filter(v => v.lang && (v.lang.toLowerCase().startsWith('en') || v.lang.toLowerCase().startsWith('us')));
 
@@ -1278,19 +1239,20 @@ function populateVoices() {
         try { localStorage.setItem('vstep_voice_uri', defaultVoice.voiceURI); } catch(e) {}
     }
 
-    // Chỉ hiển thị các giọng Nữ trong dropdown
+    // Chỉ hiển thị các giọng Nữ trong Modal
     const femaleOnly = enVoices.filter(v => !isMaleOrUnwantedVoice(v));
     const displayList = femaleOnly.length > 0 ? femaleOnly : enVoices;
 
-    if (voiceSelect) {
-        const currentSelected = state.selectedVoiceURI || voiceSelect.value;
-        voiceSelect.innerHTML = '';
+    const modalSelect = document.getElementById('voice-select-modal');
+    if (modalSelect) {
+        const curVal = state.selectedVoiceURI || modalSelect.value;
+        modalSelect.innerHTML = '';
 
         // Tùy chọn Mặc định tự động chuẩn Part 1
         const autoOpt = document.createElement('option');
         autoOpt.value = defaultVoice ? defaultVoice.voiceURI : '';
-        autoOpt.textContent = `⭐ Giọng Nữ Tự Nhiên Nhất (${defaultVoice ? defaultVoice.name : 'Khuyên dùng'})`;
-        voiceSelect.appendChild(autoOpt);
+        autoOpt.textContent = `⭐ Giọng Nữ Tự Nhiên Nhất (${defaultVoice ? defaultVoice.name : 'Khuyên dùng: Samantha / Ava / Google US'})`;
+        modalSelect.appendChild(autoOpt);
 
         displayList.forEach(v => {
             const opt = document.createElement('option');
@@ -1301,20 +1263,69 @@ function populateVoices() {
                 .replace(' - English (United States)', ' US')
                 .replace(' - English (United Kingdom)', ' UK');
             opt.textContent = `👩 ${cleanName} (${v.lang})`;
-            voiceSelect.appendChild(opt);
+            modalSelect.appendChild(opt);
         });
 
-        if (currentSelected && voices.some(v => v.voiceURI === currentSelected)) {
-            voiceSelect.value = currentSelected;
+        if (curVal && voices.some(v => v.voiceURI === curVal)) {
+            modalSelect.value = curVal;
         } else if (defaultVoice) {
-            voiceSelect.value = defaultVoice.voiceURI;
+            modalSelect.value = defaultVoice.voiceURI;
+        }
+    }
+
+    const activeVoice = voices.find(v => v.voiceURI === state.selectedVoiceURI) || defaultVoice;
+    if (activeVoice) {
+        const activeNameSpan = document.getElementById('voice-modal-active-name');
+        if (activeNameSpan) {
+            activeNameSpan.textContent = activeVoice.name;
         }
     }
 }
 
+window.openVoiceModal = () => {
+    const modal = document.getElementById('voice-modal');
+    if (modal) {
+        populateVoices();
+        const savedSpeed = localStorage.getItem('vstep_voice_speed') || '0.98';
+        const speedSelect = document.getElementById('voice-speed-modal');
+        if (speedSelect) speedSelect.value = savedSpeed;
+        modal.style.display = 'flex';
+    }
+};
+
+window.closeVoiceModal = () => {
+    const modal = document.getElementById('voice-modal');
+    if (modal) modal.style.display = 'none';
+};
+
+window.previewVoice = (voiceURI) => {
+    const sampleSentence = "Sure. If I had to choose, I would definitely go for going to the countryside because it allows our family to enjoy the fresh air and relax together.";
+    if (voiceURI) {
+        state.selectedVoiceURI = voiceURI;
+        speakClassicTTS(sampleSentence);
+    } else {
+        window.speakText(sampleSentence);
+    }
+};
+
+window.saveVoiceSettings = () => {
+    const modalSelect = document.getElementById('voice-select-modal');
+    const speedSelect = document.getElementById('voice-speed-modal');
+    if (modalSelect && modalSelect.value) {
+        state.selectedVoiceURI = modalSelect.value;
+        try { localStorage.setItem('vstep_voice_uri', modalSelect.value); } catch(e) {}
+    }
+    if (speedSelect && speedSelect.value) {
+        try { localStorage.setItem('vstep_voice_speed', speedSelect.value); } catch(e) {}
+    }
+    closeVoiceModal();
+    if (typeof showToast === 'function') {
+        showToast('🎙️ Đã lưu cài đặt Giọng Nữ thành công!');
+    }
+    window.previewVoice(state.selectedVoiceURI);
+};
+
 function initSpeechSynthesis() {
-    const voiceSelect = document.getElementById('voice-select');
-    const speedSelect = document.getElementById('speed-select');
     const audioToggle = document.getElementById('audio-toggle');
 
     if ('speechSynthesis' in window) {
@@ -1328,33 +1339,6 @@ function initSpeechSynthesis() {
                 populateVoices();
             }
         }, { once: true });
-    }
-
-    if (voiceSelect) {
-        voiceSelect.addEventListener('change', (e) => {
-            state.selectedVoiceURI = e.target.value;
-            localStorage.setItem('vstep_voice_uri', e.target.value);
-            const selectedOpt = voiceSelect.options[voiceSelect.selectedIndex];
-            showToast(`Đã chọn: ${selectedOpt ? selectedOpt.text : 'Giọng tự nhiên'}`);
-            speakText("Well, let's practice speaking naturally and fluently.");
-        });
-    }
-
-    if (speedSelect) {
-        let savedSpeed = localStorage.getItem('vstep_voice_speed');
-        if (!savedSpeed || savedSpeed === '0.92') {
-            savedSpeed = '1.0';
-            localStorage.setItem('vstep_voice_speed', '1.0');
-        }
-        speedSelect.value = savedSpeed;
-        speedSelect.addEventListener('change', (e) => {
-            const val = parseFloat(e.target.value) || 1.0;
-            localStorage.setItem('vstep_voice_speed', e.target.value);
-            showToast(`Tốc độ: ${e.target.options[e.target.selectedIndex].text}`);
-            if (window._currentAudio) {
-                window._currentAudio.playbackRate = val;
-            }
-        });
     }
 
     if (audioToggle) {
@@ -1448,9 +1432,14 @@ function cleanSpokenText(raw) {
         .replace(/\s+/g, ' ')
         .trim();
 }
+window._activeUtterance = null;
 window._speechKeepAlive = null;
 
-function speakWithBrowserTTS(clean, triggerBtn = null, speedRate = 1.0) {
+/**
+ * Classic Speech Engine chuẩn 100% SPEAKING PART 01
+ * Pitch 1.15, Rate 0.98, Giọng Nữ ngọt ngào, tươi sáng, phát âm tự nhiên
+ */
+function speakClassicTTS(cleanTxt, triggerBtn = null) {
     if (!('speechSynthesis' in window)) {
         showToast('Trình duyệt không hỗ trợ phát âm.');
         if (triggerBtn) triggerBtn.classList.remove('btn-speaking-active');
@@ -1458,13 +1447,20 @@ function speakWithBrowserTTS(clean, triggerBtn = null, speedRate = 1.0) {
     }
 
     try {
+        if (window._currentAudio) {
+            try {
+                window._currentAudio.pause();
+                window._currentAudio.currentTime = 0;
+            } catch(e) {}
+            window._currentAudio = null;
+        }
         if (window.speechSynthesis.paused) {
             window.speechSynthesis.resume();
         }
         window.speechSynthesis.cancel();
 
-        const utt = new SpeechSynthesisUtterance(clean);
-        activeUtterance = utt;
+        const utt = new SpeechSynthesisUtterance(cleanTxt);
+        window._activeUtterance = utt;
         const voices = window.speechSynthesis.getVoices() || [];
 
         let bestVoice = null;
@@ -1487,25 +1483,26 @@ function speakWithBrowserTTS(clean, triggerBtn = null, speedRate = 1.0) {
             utt.lang = 'en-US';
         }
 
-        const savedSpeed = parseFloat(localStorage.getItem('vstep_voice_speed') || '1.0');
-        utt.rate = speedRate || savedSpeed;
-        utt.pitch = 1.15; // Giọng nữ trong trẻo, tươi sáng
+        const savedSpeed = parseFloat(localStorage.getItem('vstep_voice_speed') || '0.98');
+        utt.rate = isNaN(savedSpeed) ? 0.98 : savedSpeed;
+        utt.pitch = 1.15; // Giọng nữ trong trẻo, tươi sáng chuẩn SPEAKING PART 01
+
+        if (triggerBtn) {
+            triggerBtn.classList.add('btn-speaking-active');
+        }
 
         const cleanup = () => {
             if (window._speechKeepAlive) {
                 clearInterval(window._speechKeepAlive);
                 window._speechKeepAlive = null;
             }
-            activeUtterance = null;
+            window._activeUtterance = null;
             if (triggerBtn) triggerBtn.classList.remove('btn-speaking-active');
             document.querySelectorAll('.btn-speaking-active').forEach(b => b.classList.remove('btn-speaking-active'));
         };
 
         utt.onend = cleanup;
-        utt.onerror = (e) => {
-            console.warn('Speech utterance ended or interrupted:', e);
-            cleanup();
-        };
+        utt.onerror = cleanup;
 
         // Giữ kết nối âm thanh liên tục trên Chrome / Safari khi đọc bài dài
         if (window._speechKeepAlive) clearInterval(window._speechKeepAlive);
@@ -1539,57 +1536,10 @@ window.speakText = function(text, triggerBtn = null) {
 
     stopAllAudio();
 
-    const rawTrimmed = (text || '').trim();
     const clean = cleanSpokenText(text);
-    if (!clean && !rawTrimmed) return;
+    if (!clean) return;
 
-    // Visual button feedback
-    if (triggerBtn) {
-        triggerBtn.classList.add('btn-speaking-active');
-    }
-
-    const speedSelect = document.getElementById('speed-select');
-    const speedRate = speedSelect ? (parseFloat(speedSelect.value) || 1.0) : 1.0;
-
-    // 1. ƯU TIÊN HÀNG ĐẦU: Phát File Âm Thanh Studio AI Neural MP3 (Ava Nữ - chuẩn Speaking Part 1)
-    const audioPath = findStudioAudioPath(rawTrimmed, clean);
-    if (audioPath) {
-        try {
-            const audio = new Audio(audioPath);
-            audio.playbackRate = speedRate;
-            window._currentAudio = audio;
-
-            const cleanupAudio = () => {
-                if (window._currentAudio === audio) {
-                    window._currentAudio = null;
-                }
-                if (triggerBtn) triggerBtn.classList.remove('btn-speaking-active');
-                document.querySelectorAll('.btn-speaking-active').forEach(b => b.classList.remove('btn-speaking-active'));
-            };
-
-            audio.onended = cleanupAudio;
-            audio.onerror = (e) => {
-                console.warn("Studio audio error, fallback to Web Speech API:", e);
-                cleanupAudio();
-                speakWithBrowserTTS(clean, triggerBtn, speedRate);
-            };
-
-            const playPromise = audio.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(err => {
-                    console.warn("Audio play blocked by browser, fallback to Web Speech API:", err);
-                    cleanupAudio();
-                    speakWithBrowserTTS(clean, triggerBtn, speedRate);
-                });
-            }
-            return;
-        } catch (e) {
-            console.warn("Failed to play studio audio, fallback to Web Speech API:", e);
-        }
-    }
-
-    // 2. Dự phòng: Web Speech API (khi người dùng tự gõ bài mới trong Answer Builder)
-    speakWithBrowserTTS(clean, triggerBtn, speedRate);
+    speakClassicTTS(clean, triggerBtn);
 };
 
 window.copyText = function(text) {
