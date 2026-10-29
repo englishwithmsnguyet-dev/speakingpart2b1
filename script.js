@@ -1594,7 +1594,7 @@ const samplePresetOptions = {
         r1: "it matches my passion for education and helps develop communication skills",
         r2: "it provides a dynamic working environment and good career growth",
         rej1: "doing an office administrative job",
-        rejR1: "it’s repetitive, boring, and does not suit my active personality",
+        rejR1: "it’s repetitive, boring, and is not suitable for my active personality",
         rej2: "starting a personal business immediately",
         rejR2: "it’s extremely risky and requires significant capital and experience"
     }
