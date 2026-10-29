@@ -1079,18 +1079,82 @@ window.switchSubTab = function(btn, subTabId) {
 let availableVoices = [];
 
 // ==========================================================================
-// NATURAL HUMAN & NEURAL SPEECH ENGINE (Web Speech API + Smart Filtering)
+// STUDIO AI NEURAL AUDIO ENGINE & NATURAL FALLBACK (en-US-AvaNeural - Part 1)
 // ==========================================================================
 var activeHumanAudioPlayer = null;
 var activeUtterance = null;
 var audioQueue = [];
 var currentQueueIndex = 0;
 var isPlayingQueue = false;
+window._currentAudio = null;
+
+// Studio Audio Manifest (Real Studio AI Neural Recordings - Ava Nữ)
+window.studioAudioManifest = window.studioAudioManifest || {};
+window._normalizedAudioManifest = window._normalizedAudioManifest || {};
+
+function loadStudioAudioManifest() {
+    fetch('audio/manifest.json')
+        .then(r => {
+            if (!r.ok) throw new Error('Manifest not found');
+            return r.json();
+        })
+        .then(data => {
+            window.studioAudioManifest = data;
+            window._normalizedAudioManifest = {};
+            for (const [key, val] of Object.entries(data)) {
+                window._normalizedAudioManifest[key] = val;
+                window._normalizedAudioManifest[key.toLowerCase()] = val;
+                const alpha = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+                if (alpha) window._normalizedAudioManifest[alpha] = val;
+            }
+        })
+        .catch(err => {
+            console.warn('Could not load audio/manifest.json:', err);
+        });
+}
+loadStudioAudioManifest();
+
+function findStudioAudioPath(rawText, cleanText) {
+    const m = window.studioAudioManifest || {};
+    const norm = window._normalizedAudioManifest || {};
+
+    const rawT = (rawText || '').trim();
+    const cleanT = (cleanText || '').trim();
+    const candidates = [
+        rawT,
+        cleanT,
+        rawT.replace(/\s+/g, ' '),
+        cleanT.replace(/\s+/g, ' '),
+        rawT.toLowerCase(),
+        cleanT.toLowerCase()
+    ];
+
+    for (const c of candidates) {
+        if (!c) continue;
+        if (m[c]) return m[c];
+        if (norm[c]) return norm[c];
+    }
+    const alphaRaw = rawT.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (alphaRaw && norm[alphaRaw]) return norm[alphaRaw];
+    const alphaClean = cleanT.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (alphaClean && norm[alphaClean]) return norm[alphaClean];
+
+    return null;
+}
 
 function stopAllAudio() {
+    if (window._currentAudio) {
+        try {
+            window._currentAudio.pause();
+            window._currentAudio.currentTime = 0;
+        } catch(e) {}
+        window._currentAudio = null;
+    }
     if (activeHumanAudioPlayer) {
-        activeHumanAudioPlayer.pause();
-        activeHumanAudioPlayer.currentTime = 0;
+        try {
+            activeHumanAudioPlayer.pause();
+            activeHumanAudioPlayer.currentTime = 0;
+        } catch(e) {}
         activeHumanAudioPlayer = null;
     }
     if (window._speechKeepAlive) {
@@ -1284,8 +1348,12 @@ function initSpeechSynthesis() {
         }
         speedSelect.value = savedSpeed;
         speedSelect.addEventListener('change', (e) => {
+            const val = parseFloat(e.target.value) || 1.0;
             localStorage.setItem('vstep_voice_speed', e.target.value);
             showToast(`Tốc độ: ${e.target.options[e.target.selectedIndex].text}`);
+            if (window._currentAudio) {
+                window._currentAudio.playbackRate = val;
+            }
         });
     }
 
@@ -1381,30 +1449,13 @@ function cleanSpokenText(raw) {
         .trim();
 }
 window._speechKeepAlive = null;
-window.speakText = function(text, triggerBtn = null) {
+
+function speakWithBrowserTTS(clean, triggerBtn = null, speedRate = 1.0) {
     if (!('speechSynthesis' in window)) {
         showToast('Trình duyệt không hỗ trợ phát âm.');
+        if (triggerBtn) triggerBtn.classList.remove('btn-speaking-active');
         return;
     }
-
-    if (!state.audioEnabled) {
-        state.audioEnabled = true;
-        const audioToggle = document.getElementById('audio-toggle');
-        if (audioToggle) audioToggle.classList.add('active');
-    }
-
-    stopAllAudio();
-
-    const clean = cleanSpokenText(text);
-    if (!clean) return;
-
-    // Visual button feedback
-    if (triggerBtn) {
-        triggerBtn.classList.add('btn-speaking-active');
-    }
-
-    const speedSelect = document.getElementById('speed-select');
-    const speedRate = speedSelect ? (parseFloat(speedSelect.value) || 1.0) : 1.0;
 
     try {
         if (window.speechSynthesis.paused) {
@@ -1419,7 +1470,6 @@ window.speakText = function(text, triggerBtn = null) {
         let bestVoice = null;
         if (state.selectedVoiceURI) {
             bestVoice = voices.find(v => v.voiceURI === state.selectedVoiceURI);
-            // Nếu vô tình lưu trúng giọng nam, huỷ ngay lập tức để chọn giọng nữ
             if (bestVoice && isMaleOrUnwantedVoice(bestVoice)) {
                 bestVoice = null;
                 state.selectedVoiceURI = null;
@@ -1437,9 +1487,9 @@ window.speakText = function(text, triggerBtn = null) {
             utt.lang = 'en-US';
         }
 
-        const savedSpeed = parseFloat(localStorage.getItem('vstep_voice_speed') || '0.98');
-        utt.rate = speedSelect ? (parseFloat(speedSelect.value) || savedSpeed) : savedSpeed;
-        utt.pitch = 1.15; // Giọng nữ trong trẻo, tươi sáng, chuẩn SPEAKING PART 01
+        const savedSpeed = parseFloat(localStorage.getItem('vstep_voice_speed') || '1.0');
+        utt.rate = speedRate || savedSpeed;
+        utt.pitch = 1.15; // Giọng nữ trong trẻo, tươi sáng
 
         const cleanup = () => {
             if (window._speechKeepAlive) {
@@ -1478,6 +1528,68 @@ window.speakText = function(text, triggerBtn = null) {
         console.error("Speech synthesis exception:", e);
         if (triggerBtn) triggerBtn.classList.remove('btn-speaking-active');
     }
+}
+
+window.speakText = function(text, triggerBtn = null) {
+    if (!state.audioEnabled) {
+        state.audioEnabled = true;
+        const audioToggle = document.getElementById('audio-toggle');
+        if (audioToggle) audioToggle.classList.add('active');
+    }
+
+    stopAllAudio();
+
+    const rawTrimmed = (text || '').trim();
+    const clean = cleanSpokenText(text);
+    if (!clean && !rawTrimmed) return;
+
+    // Visual button feedback
+    if (triggerBtn) {
+        triggerBtn.classList.add('btn-speaking-active');
+    }
+
+    const speedSelect = document.getElementById('speed-select');
+    const speedRate = speedSelect ? (parseFloat(speedSelect.value) || 1.0) : 1.0;
+
+    // 1. ƯU TIÊN HÀNG ĐẦU: Phát File Âm Thanh Studio AI Neural MP3 (Ava Nữ - chuẩn Speaking Part 1)
+    const audioPath = findStudioAudioPath(rawTrimmed, clean);
+    if (audioPath) {
+        try {
+            const audio = new Audio(audioPath);
+            audio.playbackRate = speedRate;
+            window._currentAudio = audio;
+
+            const cleanupAudio = () => {
+                if (window._currentAudio === audio) {
+                    window._currentAudio = null;
+                }
+                if (triggerBtn) triggerBtn.classList.remove('btn-speaking-active');
+                document.querySelectorAll('.btn-speaking-active').forEach(b => b.classList.remove('btn-speaking-active'));
+            };
+
+            audio.onended = cleanupAudio;
+            audio.onerror = (e) => {
+                console.warn("Studio audio error, fallback to Web Speech API:", e);
+                cleanupAudio();
+                speakWithBrowserTTS(clean, triggerBtn, speedRate);
+            };
+
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(err => {
+                    console.warn("Audio play blocked by browser, fallback to Web Speech API:", err);
+                    cleanupAudio();
+                    speakWithBrowserTTS(clean, triggerBtn, speedRate);
+                });
+            }
+            return;
+        } catch (e) {
+            console.warn("Failed to play studio audio, fallback to Web Speech API:", e);
+        }
+    }
+
+    // 2. Dự phòng: Web Speech API (khi người dùng tự gõ bài mới trong Answer Builder)
+    speakWithBrowserTTS(clean, triggerBtn, speedRate);
 };
 
 window.copyText = function(text) {
