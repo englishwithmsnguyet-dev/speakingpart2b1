@@ -1628,15 +1628,23 @@ body.dark-theme .tag-syntax.purple { background: #581c87; color: #e9d5ff; }
 
 .chip-kw {
     display: inline-block;
+    white-space: nowrap;
     background: #ffffff;
     color: #b45309;
     border: 1px solid #fde68a;
-    padding: 0.08rem 0.45rem;
+    padding: 0.1rem 0.48rem;
     border-radius: 5px;
     font-weight: 600;
     font-size: 0.85rem;
     margin: 1px 2px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    vertical-align: middle;
+}
+
+body.dark-theme .chip-kw {
+    background: rgba(254, 240, 138, 0.12);
+    color: #fde68a;
+    border-color: rgba(253, 230, 138, 0.3);
 }
 
 body.dark-theme .slot-badge {
@@ -2861,10 +2869,11 @@ body.dark-theme .reason-color-box.reject .example-box-header .btn-pill-tts {
 }
 
 .kw-table td {
-    padding: 0.45rem 0.85rem;
+    padding: 0.5rem 0.85rem;
     border-bottom: 1px solid #fef9c3;
     color: #451a03;
     vertical-align: middle;
+    line-height: 1.5;
 }
 
 .kw-table tr:last-child td {
@@ -2883,8 +2892,10 @@ body.dark-theme .reason-color-box.reject .example-box-header .btn-pill-tts {
     color: #92400e;
     font-size: 0.82rem;
     font-style: italic;
-    opacity: 0.85;
+    opacity: 0.9;
     margin-left: 0.35rem;
+    display: inline-block;
+    vertical-align: middle;
 }
 
 body.dark-theme .kw-table {
@@ -2907,6 +2918,10 @@ body.dark-theme .kw-table tr:nth-child(even) td {
     background: #151e2e;
 }
 
+body.dark-theme .kw-trans {
+    color: #fcd34d;
+}
+
 @media (max-width: 640px) {
     .kw-table th, .kw-table td {
         padding: 0.38rem 0.55rem;
@@ -2914,6 +2929,9 @@ body.dark-theme .kw-table tr:nth-child(even) td {
     }
     .kw-table th {
         font-size: 0.78rem;
+    }
+    .kw-trans {
+        display: inline;
     }
 }
 
