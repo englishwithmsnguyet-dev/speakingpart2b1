@@ -4125,4 +4125,57 @@ body.dark-theme .reason-trans-box {
     overflow-y: auto;
 }
 
+/* ========================================================
+   LEARNING PROGRESS STATS & COMPLETION STYLES
+   ======================================================== */
+.progress-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.85rem;
+    margin: 1.25rem 0;
+}
+.progress-stat-box {
+    background: var(--bg-body);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem;
+    text-align: center;
+}
+.progress-stat-box .stat-val {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--primary);
+    margin-top: 0.25rem;
+}
+.progress-stat-box .stat-lbl {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+}
+
+/* Situation Card Completion Styles */
+.practice-situation-card.sit-completed-card {
+    border-left: 4px solid #10b981 !important;
+    background: linear-gradient(180deg, rgba(16, 185, 129, 0.02) 0%, var(--bg-card) 100%);
+}
+.sit-action-btn.btn-complete-toggle {
+    cursor: pointer;
+}
+.sit-action-btn.btn-complete-toggle.completed {
+    background: rgba(16, 185, 129, 0.12) !important;
+    border-color: #10b981 !important;
+    color: #059669 !important;
+    font-weight: 700 !important;
+}
+body.dark-theme .sit-action-btn.btn-complete-toggle.completed {
+    background: rgba(16, 185, 129, 0.22) !important;
+    border-color: #34d399 !important;
+    color: #6ee7b7 !important;
+}
+
+
 

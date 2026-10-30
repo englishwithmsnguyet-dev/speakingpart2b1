@@ -272,8 +272,254 @@ const state = {
         timeLeft: 60,
         totalTime: 60,
         isPaused: false
+    },
+    completedSituations: [],
+    mockTestsCompleted: 0,
+    flashcardsReviewed: 0,
+    reviewedCardsSet: new Set(),
+    builderSpeechesCreated: 0,
+    lastSavedTime: null,
+    activeExamSituationId: null
+};
+
+// ========================================================
+// LEARNING PROGRESS & STUDY TRACKING SYSTEM (SPEAKING PART 02)
+// ========================================================
+const PROGRESS_KEY = 'vstep_sp2_learning_progress';
+
+function saveLearningProgress(silent = true) {
+    try {
+        const curTab = document.querySelector('.nav-item.active')?.getAttribute('data-target') || state.activeTab || 'overview';
+        const data = {
+            version: 1,
+            studentName: state.student.name || 'Khách',
+            studentClass: state.student.classCode || '',
+            currentTab: curTab,
+            completedSituations: state.completedSituations || [],
+            mockTestsCompleted: state.mockTestsCompleted || 0,
+            flashcardsReviewed: state.flashcardsReviewed || (state.reviewedCardsSet ? state.reviewedCardsSet.size : 0),
+            builderSpeechesCreated: state.builderSpeechesCreated || 0,
+            theme: state.theme || 'light',
+            lastSavedTime: new Date().toISOString()
+        };
+        localStorage.setItem(PROGRESS_KEY, JSON.stringify(data));
+        state.lastSavedTime = data.lastSavedTime;
+        updateProgressUI();
+        if (!silent) {
+            showToast('💾 Tiến độ học tập đã được lưu thành công!');
+        }
+    } catch (e) {
+        console.error('saveLearningProgress error:', e);
+    }
+}
+
+function loadLearningProgress() {
+    try {
+        const raw = localStorage.getItem(PROGRESS_KEY);
+        if (!raw) return null;
+        return JSON.parse(raw);
+    } catch (e) {
+        return null;
+    }
+}
+
+window.saveLearningProgress = saveLearningProgress;
+window.loadLearningProgress = loadLearningProgress;
+
+window.openProgressModal = () => {
+    const modal = document.getElementById('progress-modal');
+    if (!modal) return;
+    updateProgressUI();
+    modal.style.display = 'flex';
+};
+
+window.closeProgressModal = () => {
+    const modal = document.getElementById('progress-modal');
+    if (modal) modal.style.display = 'none';
+};
+
+window.clearLearningProgressConfirm = () => {
+    if (confirm('⚠️ Bạn có chắc chắn muốn đặt lại toàn bộ tiến độ học tập không?')) {
+        localStorage.removeItem(PROGRESS_KEY);
+        state.completedSituations = [];
+        state.mockTestsCompleted = 0;
+        state.flashcardsReviewed = 0;
+        if (state.reviewedCardsSet) state.reviewedCardsSet.clear();
+        state.builderSpeechesCreated = 0;
+        state.lastSavedTime = null;
+        alert('🗑 Đã đặt lại toàn bộ tiến độ!');
+        window.location.reload();
     }
 };
+
+function updateProgressUI() {
+    const saved = loadLearningProgress();
+    const sitCount = (state.completedSituations || []).length;
+    const mockCount = state.mockTestsCompleted || (saved ? saved.mockTestsCompleted : 0) || 0;
+    const fcCount = state.flashcardsReviewed || (saved ? saved.flashcardsReviewed : 0) || 0;
+    const bCount = state.builderSpeechesCreated || (saved ? saved.builderSpeechesCreated : 0) || 0;
+
+    // Sidebar badge
+    const sideSummary = document.getElementById('sidebar-progress-text');
+    if (sideSummary) sideSummary.textContent = `${sitCount} / 98 đề`;
+
+    const sideBadge = document.getElementById('sidebar-progress-badge');
+    if (sideBadge) {
+        if (state.student.name && state.student.name !== 'Khách') {
+            sideBadge.classList.remove('hidden');
+        } else {
+            sideBadge.classList.add('hidden');
+        }
+    }
+
+    // Modal elements
+    const studentEl = document.getElementById('progress-modal-student');
+    if (studentEl) studentEl.textContent = `Học viên: ${state.student.name || (saved && saved.studentName) || 'Khách'}`;
+
+    const classEl = document.getElementById('progress-modal-class');
+    if (classEl) classEl.textContent = `Lớp: ${state.student.classCode || (saved && saved.studentClass) || 'Chưa cập nhật'}`;
+
+    const sitEl = document.getElementById('progress-modal-situations-count');
+    if (sitEl) sitEl.textContent = `${sitCount} / 98`;
+
+    const mockEl = document.getElementById('progress-modal-mock-count');
+    if (mockEl) mockEl.textContent = String(mockCount);
+
+    const fcEl = document.getElementById('progress-modal-flashcards-count');
+    if (fcEl) fcEl.textContent = `${fcCount} / 25`;
+
+    const builderEl = document.getElementById('progress-modal-builder-count');
+    if (builderEl) builderEl.textContent = String(bCount);
+
+    const timeEl = document.getElementById('progress-modal-last-saved');
+    if (timeEl) {
+        const lastTime = state.lastSavedTime || (saved && saved.lastSavedTime);
+        if (lastTime) {
+            const t = new Date(lastTime);
+            timeEl.innerHTML = `<i class="fa-regular fa-clock"></i> Lần lưu gần nhất: ${t.toLocaleTimeString('vi-VN')} ${t.toLocaleDateString('vi-VN')}`;
+        } else {
+            timeEl.innerHTML = `<i class="fa-regular fa-clock"></i> Lần lưu gần nhất: Chưa lưu`;
+        }
+    }
+}
+
+function checkSavedSessionOnStart() {
+    const saved = loadLearningProgress();
+    if (!saved || !saved.studentName || saved.studentName === 'Khách') return;
+
+    const box = document.getElementById('saved-session-box');
+    const infoEl = document.getElementById('saved-session-info');
+    const detailsEl = document.getElementById('saved-session-details');
+    const nameInput = document.getElementById('student-name');
+    const classInput = document.getElementById('student-class');
+
+    if (box && infoEl && detailsEl) {
+        infoEl.textContent = `${saved.studentName} - Lớp ${saved.studentClass || 'N/A'}`;
+        const sitCount = (saved.completedSituations || []).length;
+        const mockCount = saved.mockTestsCompleted || 0;
+        const fcCount = saved.flashcardsReviewed || 0;
+        detailsEl.textContent = `Đã hoàn thành ${sitCount} / 98 đề • ${mockCount} đề thi thử • ${fcCount} thẻ từ vựng`;
+        box.style.display = 'block';
+
+        if (nameInput && !nameInput.value) nameInput.value = saved.studentName;
+        if (classInput && !classInput.value) classInput.value = saved.studentClass || '';
+    }
+}
+
+window.resumeSavedSession = () => {
+    const saved = loadLearningProgress();
+    if (!saved || !saved.studentName) return;
+    const nameInput = document.getElementById('student-name');
+    const classInput = document.getElementById('student-class');
+    if (nameInput) nameInput.value = saved.studentName || '';
+    if (classInput) classInput.value = saved.studentClass || '';
+    const startBtn = document.getElementById('start-btn');
+    if (startBtn) startBtn.click();
+};
+
+function initSituationTracking() {
+    const cards = document.querySelectorAll('.practice-situation-card');
+    cards.forEach((card, idx) => {
+        const parentPane = card.closest('.tab-pane');
+        const paneId = parentPane ? parentPane.id : 'sit';
+        const badge = card.querySelector('.sit-badge-num');
+        const badgeText = badge ? badge.textContent.trim().replace(/\s+/g, '') : `CARD${idx + 1}`;
+        const sitId = `${paneId}_${badgeText}`;
+        card.setAttribute('data-sit-id', sitId);
+
+        const actions = card.querySelector('.sit-card-actions');
+        if (actions && !actions.querySelector('.btn-complete-toggle')) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'sit-action-btn btn-complete-toggle';
+            btn.title = 'Đánh dấu đã hoàn thành đề này';
+            btn.innerHTML = '<i class="fa-regular fa-circle-check"></i> Đánh dấu đã học';
+            btn.onclick = function(e) {
+                e.stopPropagation();
+                toggleSituationCompleted(card, sitId, btn);
+            };
+            actions.appendChild(btn);
+        }
+    });
+
+    applyCompletedSituationsUI();
+}
+
+window.toggleSituationCompleted = function(card, sitId, btn) {
+    if (!card) return;
+    if (!sitId) sitId = card.getAttribute('data-sit-id');
+    if (!btn) btn = card.querySelector('.btn-complete-toggle');
+
+    if (!Array.isArray(state.completedSituations)) {
+        state.completedSituations = [];
+    }
+
+    const idx = state.completedSituations.indexOf(sitId);
+    const badgeText = card.querySelector('.sit-badge-num')?.textContent.trim() || 'Tình huống';
+
+    if (idx >= 0) {
+        state.completedSituations.splice(idx, 1);
+        if (btn) {
+            btn.classList.remove('completed');
+            btn.innerHTML = '<i class="fa-regular fa-circle-check"></i> Đánh dấu đã học';
+        }
+        card.classList.remove('sit-completed-card');
+        showToast(`↩️ Đã bỏ đánh dấu hoàn thành ${badgeText}`);
+    } else {
+        state.completedSituations.push(sitId);
+        if (btn) {
+            btn.classList.add('completed');
+            btn.innerHTML = '<i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Đã học xong';
+        }
+        card.classList.add('sit-completed-card');
+        showToast(`✅ Đã đánh dấu hoàn thành ${badgeText}!`);
+    }
+
+    saveLearningProgress(true);
+    updateProgressUI();
+};
+
+function applyCompletedSituationsUI() {
+    const completedSet = new Set(state.completedSituations || []);
+    const cards = document.querySelectorAll('.practice-situation-card');
+    cards.forEach(card => {
+        const sitId = card.getAttribute('data-sit-id');
+        const btn = card.querySelector('.btn-complete-toggle');
+        if (completedSet.has(sitId)) {
+            card.classList.add('sit-completed-card');
+            if (btn) {
+                btn.classList.add('completed');
+                btn.innerHTML = '<i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Đã học xong';
+            }
+        } else {
+            card.classList.remove('sit-completed-card');
+            if (btn) {
+                btn.classList.remove('completed');
+                btn.innerHTML = '<i class="fa-regular fa-circle-check"></i> Đánh dấu đã học';
+            }
+        }
+    });
+}
 
 function initApp() {
     initAuth();
@@ -284,6 +530,8 @@ function initApp() {
     initAnswerBuilder();
     initExamTimerAndRecorder();
     initFlashcards();
+    initSituationTracking();
+    updateProgressUI();
 
     const sampleFullBtn = document.getElementById('play-full-sample-btn');
     if (sampleFullBtn) {
@@ -389,6 +637,8 @@ function initAuth() {
     if (classInput) classInput.value = '';
     if (errorMsg) errorMsg.style.display = 'none';
 
+    checkSavedSessionOnStart();
+
     let isSubmitting = false;
 
     window.finishLogin = (finalName, finalClass) => {
@@ -400,6 +650,19 @@ function initAuth() {
 
         if (displayName) displayName.textContent = `${finalName} (${finalClass})`;
         if (userProfile) userProfile.classList.remove('hidden');
+
+        // Restore learning progress if previously saved for this student
+        const saved = loadLearningProgress();
+        if (saved && (saved.studentName === finalName || !saved.studentName || saved.studentName === 'Khách')) {
+            state.completedSituations = saved.completedSituations || [];
+            state.mockTestsCompleted = saved.mockTestsCompleted || 0;
+            state.flashcardsReviewed = saved.flashcardsReviewed || 0;
+            state.builderSpeechesCreated = saved.builderSpeechesCreated || 0;
+            state.lastSavedTime = saved.lastSavedTime || null;
+            applyCompletedSituationsUI();
+        }
+        updateProgressUI();
+        saveLearningProgress(true);
 
         if (state.isTeacher && window.groupLockManager) {
             window.groupLockManager.unlockAllForTeacher();
@@ -990,6 +1253,9 @@ function initNavigation() {
                 topTitle.textContent = spanEl.textContent.replace('📖 ', '').toUpperCase();
             }
         }
+
+        state.activeTab = targetId;
+        saveLearningProgress(true);
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -1761,6 +2027,9 @@ function initAnswerBuilder() {
 
         const fullSpeech = `${intro}\n\n${reason1} ${reason2}\n\n${reject1} ${reject2}\n\n${concl}`;
         resultBox.textContent = fullSpeech;
+        state.builderSpeechesCreated = (state.builderSpeechesCreated || 0) + 1;
+        updateProgressUI();
+        saveLearningProgress(true);
         showToast('Đã tạo bài nói hoàn chỉnh! 🎉');
     });
 
@@ -1829,6 +2098,22 @@ window.startExamWithPrompt = function(promptText) {
     if (window.resetExamTimer) {
         window.resetExamTimer();
     }
+
+    // Track active situation ID for progress completion
+    state.activeExamSituationId = null;
+    const cards = document.querySelectorAll('.practice-situation-card');
+    const cleanSearch = promptText.replace(/<[^>]+>/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    for (const c of cards) {
+        const pEl = c.querySelector('.sit-prompt-text');
+        if (pEl) {
+            const cNorm = pEl.textContent.toLowerCase().replace(/[^a-z0-9]/g, '');
+            if ((cleanSearch.length >= 25 && cNorm.includes(cleanSearch.slice(0, 30))) || (cNorm.length >= 25 && cleanSearch.includes(cNorm.slice(0, 30)))) {
+                state.activeExamSituationId = c.getAttribute('data-sit-id');
+                break;
+            }
+        }
+    }
+
     const promptDisplay = document.getElementById('exam-prompt-content');
     if (promptDisplay) {
         let cleanPrompt = promptText.trim();
@@ -2171,6 +2456,17 @@ function initExamTimerAndRecorder() {
                 try { window.confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } }); } catch(e) {}
             }
             playBeep(523.25, 0.5);
+
+            if (state.activeExamSituationId) {
+                if (!state.completedSituations.includes(state.activeExamSituationId)) {
+                    state.completedSituations.push(state.activeExamSituationId);
+                    applyCompletedSituationsUI();
+                }
+            }
+            state.mockTestsCompleted = (state.mockTestsCompleted || 0) + 1;
+            updateProgressUI();
+            saveLearningProgress(true);
+
             showToast('🎉 Chúc mừng bạn đã hoàn thành bài thi Speaking Part 02!');
 
         } else {
@@ -2372,6 +2668,14 @@ function initFlashcards() {
         backHint.textContent = `🔊 ${item.en}`;
 
         counterDisplay.textContent = `${state.currentCardIdx + 1} / ${state.flashcards.length}`;
+
+        if (item && item.en) {
+            if (!state.reviewedCardsSet) state.reviewedCardsSet = new Set();
+            state.reviewedCardsSet.add(item.en);
+            state.flashcardsReviewed = state.reviewedCardsSet.size;
+            updateProgressUI();
+            saveLearningProgress(true);
+        }
     }
 
     cardBox.addEventListener('click', () => {
