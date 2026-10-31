@@ -1264,6 +1264,7 @@ function initNavigation() {
         }
     }
 
+    window.switchTab = switchTab;
     window.switchTabDirectly = switchTabDirectly;
 
     navItems.forEach(item => {

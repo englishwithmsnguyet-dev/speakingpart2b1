@@ -4541,6 +4541,206 @@ body.dark-theme .sidebar-footer-avatar {
     margin-left: auto;
 }
 
+/* 5. Teacher Brand Showcase Card (Overview Tab) */
+.teacher-brand-card {
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 1.75rem 2rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.teacher-brand-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 6px;
+    height: 100%;
+    background: linear-gradient(180deg, #2563eb, #8b5cf6, #ec4899);
+}
+
+.teacher-brand-main {
+    display: flex;
+    align-items: center;
+    gap: 1.75rem;
+    margin-bottom: 1.35rem;
+}
+
+.teacher-avatar-frame {
+    position: relative;
+    width: 105px;
+    height: 105px;
+    flex-shrink: 0;
+}
+
+.teacher-brand-photo {
+    width: 105px;
+    height: 105px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0 10px 25px rgba(67, 97, 238, 0.3);
+    border: 3.5px solid #ffffff;
+    background: #ffffff;
+    display: block;
+}
+
+body.dark-theme .teacher-brand-photo {
+    border-color: #3b82f6;
+    box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4);
+}
+
+.teacher-verified-pill {
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #ffffff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.2rem 0.65rem;
+    border-radius: 20px;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    border: 2px solid var(--bg-card);
+}
+
+.teacher-brand-content {
+    flex: 1;
+}
+
+.teacher-tagline {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 0.45rem;
+}
+
+.teacher-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: #4361ee;
+    background: rgba(67, 97, 238, 0.08);
+    border: 1px solid rgba(67, 97, 238, 0.22);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+}
+
+.teacher-badge.fb-badge {
+    color: #1877f2;
+    background: rgba(24, 119, 242, 0.08);
+    border-color: rgba(24, 119, 242, 0.22);
+}
+
+.teacher-brand-heading {
+    font-size: 1.45rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1.25;
+}
+
+body.dark-theme .teacher-brand-heading {
+    background: linear-gradient(135deg, #60a5fa, #c084fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.teacher-brand-intro {
+    font-size: 0.94rem;
+    line-height: 1.65;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.teacher-brand-intro strong {
+    color: var(--text-main);
+}
+
+.teacher-brand-btn-row {
+    display: flex;
+    gap: 0.85rem;
+    flex-wrap: wrap;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.btn-teacher-connect {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1.25rem;
+    background: linear-gradient(135deg, #1877f2, #0d65d9);
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.88rem;
+    border-radius: 12px;
+    text-decoration: none;
+    box-shadow: 0 4px 14px rgba(24, 119, 242, 0.28);
+    transition: all 0.2s ease;
+}
+
+.btn-teacher-connect:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(24, 119, 242, 0.35);
+    color: #ffffff;
+}
+
+.btn-teacher-explore {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1.25rem;
+    background: rgba(37, 99, 235, 0.08);
+    color: var(--primary);
+    border: 1.5px solid rgba(37, 99, 235, 0.25);
+    font-weight: 700;
+    font-size: 0.88rem;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-teacher-explore:hover {
+    background: rgba(37, 99, 235, 0.16);
+    border-color: var(--primary);
+    transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+    .teacher-brand-main {
+        flex-direction: column;
+        text-align: center;
+        gap: 1.15rem;
+    }
+    .teacher-tagline {
+        justify-content: center;
+    }
+    .teacher-brand-btn-row {
+        justify-content: center;
+    }
+    .btn-teacher-connect, .btn-teacher-explore {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
 
 
 
