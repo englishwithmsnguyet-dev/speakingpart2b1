@@ -696,7 +696,7 @@ function initAuth() {
 
         if (startBtn) {
             startBtn.disabled = false;
-            startBtn.innerHTML = 'BẮT ĐẦU HỌC NGAY';
+            startBtn.innerHTML = '<span>BẮT ĐẦU HỌC</span> <i class="fa-solid fa-arrow-right"></i>';
         }
         isSubmitting = false;
 
@@ -831,7 +831,7 @@ function initAuth() {
                 welcomeModal.style.opacity = '1';
                 if (startBtn) {
                     startBtn.disabled = false;
-                    startBtn.innerHTML = 'CẬP NHẬT & VÀO HỌC';
+                    startBtn.innerHTML = '<span>CẬP NHẬT & VÀO HỌC</span> <i class="fa-solid fa-arrow-right"></i>';
                 }
                 if (nameInput) nameInput.focus();
             }
