@@ -145,7 +145,38 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
 .brand {
     display: flex;
     align-items: center;
-    gap: 0.85rem;
+    gap: 0.75rem;
+}
+
+.brand-avatar-box {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    padding: 2px;
+    background: linear-gradient(135deg, #2563eb, #8b5cf6);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.brand-avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    background: #ffffff;
+}
+
+.brand-creator {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: var(--primary);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    margin-bottom: 2px;
 }
 
 .brand-badge {
@@ -280,11 +311,65 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
 
 .sidebar-footer {
     margin-top: auto;
-    padding: 0.95rem 1.25rem;
+    padding: 0.85rem 1rem;
     border-top: 1px solid var(--border);
     font-size: 0.76rem;
     color: var(--text-light);
-    text-align: center;
+}
+
+.teacher-footer-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.55rem 0.75rem;
+    background: rgba(37, 99, 235, 0.06);
+    border: 1px solid rgba(37, 99, 235, 0.16);
+    border-radius: 12px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.teacher-footer-badge:hover {
+    background: rgba(37, 99, 235, 0.12);
+    border-color: rgba(37, 99, 235, 0.3);
+    transform: translateY(-1px);
+}
+
+.footer-teacher-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1.5px solid var(--primary);
+    object-fit: cover;
+    flex-shrink: 0;
+    background: #ffffff;
+}
+
+.footer-teacher-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+    text-align: left;
+}
+
+.footer-teacher-role {
+    font-size: 0.64rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.footer-teacher-name {
+    font-size: 0.82rem;
+    color: var(--text-main);
+    font-weight: 700;
+}
+
+.footer-teacher-sub {
+    font-size: 0.69rem;
+    color: #1877f2;
+    font-weight: 600;
 }
 
 .sidebar-footer strong {
@@ -326,12 +411,39 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
 }
 
 .brand-link-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     font-size: 0.88rem;
     font-weight: 700;
+    text-decoration: none;
+    letter-spacing: 0.5px;
+    padding: 0.35rem 0.8rem;
+    border-radius: 20px;
+    background: rgba(37, 99, 235, 0.05);
+    border: 1px solid rgba(37, 99, 235, 0.16);
+    transition: all 0.2s ease;
+}
+
+.brand-link-header:hover {
+    background: rgba(37, 99, 235, 0.1);
+    border-color: rgba(37, 99, 235, 0.3);
+    transform: translateY(-1px);
+}
+
+.brand-link-header span {
     background: linear-gradient(135deg, #2563eb, #8b5cf6);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    letter-spacing: 0.5px;
+}
+
+.topbar-avatar-img {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1.5px solid #8b5cf6;
+    flex-shrink: 0;
 }
 
 .top-actions {
@@ -419,6 +531,33 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
     border-radius: 50%;
     background: radial-gradient(circle, rgba(99, 102, 241, 0.4) 0%, rgba(244, 63, 94, 0) 70%);
     pointer-events: none;
+}
+
+.hero-brand-top {
+    display: flex;
+    align-items: center;
+    gap: 1.15rem;
+    margin-bottom: 0.75rem;
+}
+
+.hero-avatar-box {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    padding: 3px;
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+    flex-shrink: 0;
+}
+
+.hero-avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    background: #ffffff;
 }
 
 .hero-badge-pill {
@@ -4176,6 +4315,232 @@ body.dark-theme .sit-action-btn.btn-complete-toggle.completed {
     border-color: #34d399 !important;
     color: #6ee7b7 !important;
 }
+
+/* =========================================
+   ENGLISH WITH MISS NGUYET - BRAND IDENTITY
+   ========================================= */
+
+/* 1. Login Modal Brand */
+.login-brand-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 1.25rem;
+}
+
+.login-avatar-ring {
+    position: relative;
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.85rem;
+    transition: transform 0.3s ease;
+}
+
+.login-avatar-ring:hover {
+    transform: scale(1.05);
+}
+
+.login-brand-img {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0 10px 25px rgba(67, 97, 238, 0.45);
+    border: 3px solid #ffffff;
+}
+
+body.dark-theme .login-brand-img {
+    border-color: #3b82f6;
+    box-shadow: 0 10px 25px rgba(59, 130, 246, 0.5);
+}
+
+.login-brand-tag {
+    font-size: 0.88rem;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    color: #4361ee;
+    text-transform: uppercase;
+    background: rgba(67, 97, 238, 0.08);
+    padding: 0.35rem 1rem;
+    border-radius: 50px;
+    border: 1.5px solid rgba(67, 97, 238, 0.25);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+body.dark-theme .login-brand-tag {
+    color: #93c5fd;
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.4);
+}
+
+/* 2. Sidebar Brand Header */
+.sidebar-header .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.sidebar-header .brand:hover {
+    transform: translateX(2px);
+}
+
+.brand-avatar-box {
+    position: relative;
+    width: 46px;
+    height: 46px;
+    flex-shrink: 0;
+}
+
+.brand-avatar-box .brand-avatar-img {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0 4px 14px rgba(67, 97, 238, 0.35);
+    border: 2px solid #ffffff;
+}
+
+body.dark-theme .brand-avatar-box .brand-avatar-img {
+    border-color: #3b82f6;
+}
+
+.brand-verified-dot {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 16px;
+    height: 16px;
+    background: #10b981;
+    color: #ffffff;
+    border-radius: 50%;
+    font-size: 0.55rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--bg-sidebar);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
+
+.brand-info-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.brand-author-name {
+    font-size: 1.05rem;
+    line-height: 1.2;
+    font-weight: 800;
+    color: var(--text-main);
+    letter-spacing: 0.5px;
+}
+
+.brand-course-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: 1px;
+    margin-top: 3px;
+    text-transform: uppercase;
+}
+
+/* 3. Topbar Brand Link */
+.topbar-brand-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    text-decoration: none;
+    padding: 0.3rem 0.85rem;
+    border-radius: 50px;
+    background: rgba(67, 97, 238, 0.05);
+    border: 1.5px solid rgba(67, 97, 238, 0.18);
+    transition: all 0.25s ease;
+}
+
+.topbar-brand-link:hover {
+    background: rgba(67, 97, 238, 0.12);
+    border-color: rgba(67, 97, 238, 0.35);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(67, 97, 238, 0.15);
+}
+
+.topbar-brand-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0 2px 8px rgba(67, 97, 238, 0.3);
+    border: 1.5px solid #ffffff;
+}
+
+body.dark-theme .topbar-brand-avatar {
+    border-color: #3b82f6;
+}
+
+/* 4. Sidebar Footer Brand */
+.sidebar-footer-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+    padding: 0.4rem 0.6rem;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+}
+
+.sidebar-footer-brand:hover {
+    background: rgba(67, 97, 238, 0.08);
+}
+
+.sidebar-footer-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    border: 1.5px solid #ffffff;
+    flex-shrink: 0;
+}
+
+body.dark-theme .sidebar-footer-avatar {
+    border-color: #3b82f6;
+}
+
+.sidebar-footer-text {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+.sf-title {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.sf-name {
+    font-size: 0.82rem;
+    color: var(--text-main);
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sf-arrow {
+    font-size: 0.75rem;
+    color: var(--primary);
+    opacity: 0.7;
+    margin-left: auto;
+}
+
 
 
 
