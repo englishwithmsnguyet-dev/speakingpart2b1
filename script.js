@@ -1255,6 +1255,9 @@ function initNavigation() {
         }
 
         state.activeTab = targetId;
+        if (targetId === 'flower-garden' && window.FlowerGarden) {
+            window.FlowerGarden.render();
+        }
         saveLearningProgress(true);
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
