@@ -583,7 +583,7 @@ function initAuth() {
         "Lưu Thị Vân Anh",
         "Nguyễn Tuấn Anh",
         "Trần Thị Huỳnh Duy",
-        "Duy Thị Huỳnh Hân",
+        "Duy Thị Quỳnh Hân",
         "Trần Thị Xuân Hoa",
         "Nguyễn Phạm Khang",
         "Đặng Văn Khánh",
