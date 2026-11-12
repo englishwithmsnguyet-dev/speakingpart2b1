@@ -14,7 +14,7 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
 <!-- Canvas Confetti -->
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
-<link href="styles.css?v=20261107_v17" rel="stylesheet"/>
+<link href="styles.css?v=20261112_progress_pills" rel="stylesheet"/>
     <!-- Chậu Cỏ 4 Lá May Mắn & Tích Luỹ Nước Nỗ Lực Styles -->
     <link rel="stylesheet" href="flower_garden.css?v=20261105_v20">
     <style>
@@ -175,9 +175,18 @@
 <strong id="display-name">Guest</strong>
 </div>
 </div>
-<div id="sidebar-progress-badge" class="hidden" onclick="openProgressModal()" style="margin: 0.5rem 1rem 0; padding: 0.45rem 0.75rem; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: #059669; transition: all 0.2s;" title="Nhấp để xem và quản lý tiến độ học tập">
-    <span style="display:flex; align-items:center; gap:0.4rem;"><i class="fa-solid fa-chart-line"></i> <strong>Tiến độ:</strong></span>
-    <span style="font-weight:700; display:flex; align-items:center; gap:0.3rem;"><i class="fa-solid fa-circle-check"></i> <span id="sidebar-progress-text">0 / 109 đề</span></span>
+<div id="sidebar-progress-badge" class="sidebar-progress-badge hidden" onclick="openProgressModal()" title="Nhấp để xem và quản lý tiến độ học tập">
+<div class="progress-badge-top">
+<span class="progress-badge-title"><i class="fa-solid fa-chart-line"></i> TIẾN ĐỘ HỌC TẬP</span>
+<span id="sidebar-progress-percent" class="progress-badge-percent">0%</span>
+</div>
+<div class="progress-badge-bar-bg">
+<div id="sidebar-progress-bar" class="progress-badge-bar-fill" style="width: 0%;"></div>
+</div>
+<div class="progress-badge-sub">
+<span id="sidebar-progress-text">0 / 109 đề đã học</span>
+<span class="progress-badge-btn"><i class="fa-solid fa-arrow-up-right-from-square"></i> Chi tiết</span>
+</div>
 </div>
 <div class="menu-label">MỤC LỤC BÀI GIẢNG</div>
 <ul class="nav-list">
@@ -197,63 +206,63 @@
 <li class="nav-item locked-group" data-group-level="1" data-target="group-gift">
 <a href="#group-gift">
 <i class="fa-solid fa-gift" style="color: #f43f5e;"></i>
-<span>1. Chọn Quà Tặng</span>
+<span>1. Chọn Quà Tặng</span><span class="nav-progress-pill" id="nav-prog-group-gift">0/16</span>
 <i class="fa-solid fa-lock item-lock-icon" title="Tạm khóa"></i>
 </a>
 </li>
 <li class="nav-item locked-group" data-group-level="2" data-target="group-activity">
 <a href="#group-activity">
 <i class="fa-solid fa-person-running" style="color: #10b981;"></i>
-<span>2. Chọn Hoạt Động</span>
+<span>2. Chọn Hoạt Động</span><span class="nav-progress-pill" id="nav-prog-group-activity">0/15</span>
 <i class="fa-solid fa-lock item-lock-icon" title="Tạm khóa"></i>
 </a>
 </li>
 <li class="nav-item locked-group" data-group-level="3" data-target="group-location">
 <a href="#group-location">
 <i class="fa-solid fa-location-dot" style="color: #0284c7;"></i>
-<span>3. Chọn Địa Điểm</span>
+<span>3. Chọn Địa Điểm</span><span class="nav-progress-pill" id="nav-prog-group-location">0/16</span>
 <i class="fa-solid fa-lock item-lock-icon" title="Tạm khóa"></i>
 </a>
 </li>
 <li class="nav-item locked-group" data-group-level="4" data-target="group-transport">
 <a href="#group-transport">
 <i class="fa-solid fa-car-side" style="color: #f59e0b;"></i>
-<span>4. Chọn Phương Tiện</span>
+<span>4. Chọn Phương Tiện</span><span class="nav-progress-pill" id="nav-prog-group-transport">0/6</span>
 <i class="fa-solid fa-lock item-lock-icon" title="Tạm khóa"></i>
 </a>
 </li>
 <li class="nav-item locked-group" data-group-level="5" data-target="group-career">
 <a href="#group-career">
 <i class="fa-solid fa-briefcase" style="color: #4f46e5;"></i>
-<span>5. Chọn Nghề Nghiệp</span>
+<span>5. Chọn Nghề Nghiệp</span><span class="nav-progress-pill" id="nav-prog-group-career">0/8</span>
 <i class="fa-solid fa-lock item-lock-icon" title="Tạm khóa"></i>
 </a>
 </li>
 <li class="nav-item locked-group" data-group-level="6" data-target="group-factor">
 <a href="#group-factor">
 <i class="fa-solid fa-sliders" style="color: #db2777;"></i>
-<span>6. Chọn Yếu Tố</span>
+<span>6. Chọn Yếu Tố</span><span class="nav-progress-pill" id="nav-prog-group-factor">0/10</span>
 <i class="fa-solid fa-lock item-lock-icon" title="Tạm khóa"></i>
 </a>
 </li>
 <li class="nav-item locked-group" data-group-level="7" data-target="group-solution">
 <a href="#group-solution">
 <i class="fa-solid fa-lightbulb" style="color: #8b5cf6;"></i>
-<span>7. Chọn Giải Pháp</span>
+<span>7. Chọn Giải Pháp</span><span class="nav-progress-pill" id="nav-prog-group-solution">0/15</span>
 <i class="fa-solid fa-lock item-lock-icon" title="Tạm khóa"></i>
 </a>
 </li>
 <li class="nav-item locked-group" data-group-level="8" data-target="group-form">
 <a href="#group-form">
 <i class="fa-solid fa-shapes" style="color: #0d9488;"></i>
-<span>8. Chọn Hình Thức</span>
+<span>8. Chọn Hình Thức</span><span class="nav-progress-pill" id="nav-prog-group-form">0/7</span>
 <i class="fa-solid fa-lock item-lock-icon" title="Tạm khóa"></i>
 </a>
 </li>
 <li class="nav-item locked-group" data-group-level="9" data-target="group-other">
 <a href="#group-other">
 <i class="fa-solid fa-fire" style="color: #64748b;"></i>
-<span>9. Những Đề Khó Khác</span>
+<span>9. Những Đề Khó Khác</span><span class="nav-progress-pill" id="nav-prog-group-other">0/16</span>
 <i class="fa-solid fa-lock item-lock-icon" title="Tạm khóa"></i>
 </a>
 </li>
@@ -28805,7 +28814,10 @@ Nhóm giải pháp bao gồm nhiều vấn đề cụ thể khác nhau trong đ�
                 </div>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 0.65rem; margin-top: 1.5rem;">
+            <div class="progress-groups-title"><i class="fa-solid fa-list-check"></i> TIẾN ĐỘ TỪNG NHÓM CHỦ ĐỀ:</div>
+            <div class="progress-groups-list" id="progress-modal-groups-list"></div>
+
+            <div style="display: flex; flex-direction: column; gap: 0.65rem; margin-top: 1.25rem;">
                 <button type="button" class="btn" onclick="saveLearningProgress(false)" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 0.85rem 1.25rem; border-radius: 12px; font-weight: 700; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);">
                     <i class="fa-solid fa-floppy-disk"></i> LƯU TIẾN ĐỘ NGAY
                 </button>
@@ -28882,7 +28894,7 @@ Nhóm giải pháp bao gồm nhiều vấn đề cụ thể khác nhau trong đ�
         </div>
     </div>
 
-<script src="script.js?v=20261112_v2"></script>
+<script src="script.js?v=20261112_progress_pills"></script>
     <!-- Hệ thống Chậu Cỏ 4 Lá May Mắn & Tích Luỹ Nước Nỗ Lực -->
     <script src="flower_definitions.js?v=20261105_v20"></script>
     <script src="flower_garden.js?v=20261105_v20"></script>

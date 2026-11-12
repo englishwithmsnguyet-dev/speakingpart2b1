@@ -286,6 +286,18 @@ const state = {
 // LEARNING PROGRESS & STUDY TRACKING SYSTEM (SPEAKING PART 02)
 // ========================================================
 const PROGRESS_KEY = 'vstep_sp2_learning_progress';
+const TOTAL_SITUATIONS = 109;
+const GROUPS_INFO = [
+    { id: 'group-gift', name: '1. Chọn Quà Tặng', total: 16, icon: 'fa-gift', color: '#f43f5e' },
+    { id: 'group-activity', name: '2. Chọn Hoạt Động', total: 15, icon: 'fa-person-running', color: '#10b981' },
+    { id: 'group-location', name: '3. Chọn Địa Điểm', total: 16, icon: 'fa-location-dot', color: '#0284c7' },
+    { id: 'group-transport', name: '4. Chọn Phương Tiện', total: 6, icon: 'fa-car-side', color: '#f59e0b' },
+    { id: 'group-career', name: '5. Chọn Nghề Nghiệp', total: 8, icon: 'fa-briefcase', color: '#4f46e5' },
+    { id: 'group-factor', name: '6. Chọn Yếu Tố', total: 10, icon: 'fa-sliders', color: '#db2777' },
+    { id: 'group-solution', name: '7. Chọn Giải Pháp', total: 15, icon: 'fa-lightbulb', color: '#8b5cf6' },
+    { id: 'group-form', name: '8. Chọn Hình Thức', total: 7, icon: 'fa-shapes', color: '#0d9488' },
+    { id: 'group-other', name: '9. Những Đề Khó Khác', total: 16, icon: 'fa-fire', color: '#64748b' }
+];
 
 function saveLearningProgress(silent = true) {
     try {
@@ -352,16 +364,28 @@ window.clearLearningProgressConfirm = () => {
     }
 };
 
+window.jumpToGroupFromModal = function(groupId) {
+    closeProgressModal();
+    const navLink = document.querySelector(`.nav-item[data-target="${groupId}"] a`);
+    if (navLink) navLink.click();
+};
+
 function updateProgressUI() {
     const saved = loadLearningProgress();
-    const sitCount = (state.completedSituations || []).length;
+    const completedList = state.completedSituations || [];
+    const sitCount = completedList.length;
+    const percent = Math.round((sitCount / TOTAL_SITUATIONS) * 100);
     const mockCount = state.mockTestsCompleted || (saved ? saved.mockTestsCompleted : 0) || 0;
     const fcCount = state.flashcardsReviewed || (saved ? saved.flashcardsReviewed : 0) || 0;
     const bCount = state.builderSpeechesCreated || (saved ? saved.builderSpeechesCreated : 0) || 0;
 
     // Sidebar badge
+    const sidePercent = document.getElementById('sidebar-progress-percent');
+    if (sidePercent) sidePercent.textContent = `${percent}%`;
+    const sideBar = document.getElementById('sidebar-progress-bar');
+    if (sideBar) sideBar.style.width = `${percent}%`;
     const sideSummary = document.getElementById('sidebar-progress-text');
-    if (sideSummary) sideSummary.textContent = `${sitCount} / 109 đề`;
+    if (sideSummary) sideSummary.textContent = `${sitCount} / ${TOTAL_SITUATIONS} đề đã học`;
 
     const sideBadge = document.getElementById('sidebar-progress-badge');
     if (sideBadge) {
@@ -370,6 +394,48 @@ function updateProgressUI() {
         } else {
             sideBadge.classList.add('hidden');
         }
+    }
+
+    const getGroupDoneCount = (groupId) => completedList.filter(id => id.startsWith(groupId + '_') || id === groupId).length;
+
+    // Group progress pills in sidebar
+    GROUPS_INFO.forEach(g => {
+        const gCount = getGroupDoneCount(g.id);
+        const pill = document.getElementById(`nav-prog-${g.id}`);
+        if (pill) {
+            pill.classList.remove('completed', 'partial');
+            if (gCount >= g.total) {
+                pill.classList.add('completed');
+                pill.textContent = `${gCount}/${g.total} ✓`;
+            } else {
+                pill.textContent = `${gCount}/${g.total}`;
+                if (gCount > 0) pill.classList.add('partial');
+            }
+        }
+    });
+
+    // Modal per-group breakdown list
+    const groupsContainer = document.getElementById('progress-modal-groups-list');
+    if (groupsContainer) {
+        groupsContainer.innerHTML = GROUPS_INFO.map(g => {
+            const gCount = getGroupDoneCount(g.id);
+            const gPct = Math.round((gCount / g.total) * 100);
+            const isDone = gCount >= g.total;
+            return `
+            <div class="progress-group-item" onclick="jumpToGroupFromModal('${g.id}')" title="Nhấp để chuyển tới nhóm ${g.name}">
+                <div class="progress-group-info">
+                    <div class="progress-group-top">
+                        <span class="progress-group-name"><i class="fa-solid ${g.icon}" style="color:${g.color};"></i> ${g.name}</span>
+                        <span class="progress-group-badge ${isDone ? 'done' : ''}">${gCount} / ${g.total} (${gPct}%)</span>
+                    </div>
+                    <div class="progress-group-bar">
+                        <div class="progress-group-bar-fill" style="width:${gPct}%; ${isDone ? 'background:#10b981;' : ''}"></div>
+                    </div>
+                </div>
+                <i class="fa-solid fa-chevron-right" style="color:var(--text-light); font-size:0.8rem;"></i>
+            </div>
+            `;
+        }).join('');
     }
 
     // Modal elements
